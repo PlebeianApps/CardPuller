@@ -1,3 +1,3 @@
 dependencies: \
-  /Users/jseav19/Documents/Titanium\ Studio\ Workspace/CardPuller/build/iphone/Classes/UIImage+Alpha.m \
-  /Users/jseav19/Documents/Titanium\ Studio\ Workspace/CardPuller/build/iphone/Classes/UIImage+Alpha.h
+  /Users/id/Personal/Work/DesignJobs/Plebeian/Titanium/CardPuller/build/iphone/Classes/UIImage+Alpha.m \
+  /Users/id/Personal/Work/DesignJobs/Plebeian/Titanium/CardPuller/build/iphone/Classes/UIImage+Alpha.h

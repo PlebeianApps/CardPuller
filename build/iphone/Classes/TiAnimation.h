@@ -51,7 +51,6 @@
 	TiProxy		*transform;
 	NSNumber	*transition;
 	TiViewProxy	*view;
-    TiViewProxy *animatedViewProxy;
 
 	// this is a temporary function passed in
 	ListenerEntry *callback;
@@ -109,8 +108,5 @@
 -(void)animate:(id)args;
 
 -(BOOL)isTransitionAnimation;
-
--(NSTimeInterval)animationDuration;
--(void)animationCompleted:(NSString *)animationID finished:(NSNumber *)finished context:(void *)context;
 
 @end

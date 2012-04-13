@@ -484,14 +484,7 @@ static NSString* ASI_TLS_VERSION_1_2 = @"kCFStreamSocketSecurityLevelTLSv1_2SSLv
 	if (!requestHeaders) {
 		[self setRequestHeaders:[NSMutableDictionary dictionaryWithCapacity:1]];
 	}
-	if (value == nil)
-	{
-		[requestHeaders removeObjectForKey:header];
-	}
-	else
-	{
-		[requestHeaders setObject:value forKey:header];
-	}
+	[requestHeaders setObject:value forKey:header];
 }
 
 // This function will be called either just before a request starts, or when postLength is needed, whichever comes first

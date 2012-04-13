@@ -1,112 +1,34 @@
-// this sets the background color of the master UIView (when there are no windows/tab groups on it)
-Titanium.UI.setBackgroundColor('#000');
+/*
+ * A tabbed application, consisting of multiple stacks of windows associated with tabs in a tab group.  
+ * A starting point for tab-based application with multiple top-level windows. 
+ * Requires Titanium Mobile SDK 1.8.0+.
+ * 
+ * In app.js, we generally take care of a few things:
+ * - Bootstrap the application with any data we need
+ * - Check for dependencies like device type, platform version or network connection
+ * - Require and open our top-level UI component
+ *  
+ */
 
-// create tab group
-var tabGroup = Titanium.UI.createTabGroup();
+//bootstrap and check dependencies
+if (Ti.version < 1.8 ) {
+	alert('Sorry - this application template requires Titanium Mobile SDK 1.8 or later');
+}
+else if (Ti.Platform.osname === 'mobileweb') {
+	alert('Mobile web is not yet supported by this template');
+}
 
+// This is a single context application with mutliple windows in a stack
+(function() {
+	//determine platform and form factor and render approproate components
+	var osname = Ti.Platform.osname,
+		version = Ti.Platform.version,
+		height = Ti.Platform.displayCaps.platformHeight,
+		width = Ti.Platform.displayCaps.platformWidth;
+	
+	//considering tablet to have one dimension over 900px - this is imperfect, so you should feel free to decide
+	//yourself what you consider a tablet form factor for android
 
-//
-// create 'Readings' tab and root window
-//
-var win1 = Titanium.UI.createWindow({  
-    title:'Readings',
-    backgroundColor:'#fff'
-});
-var tab1 = Titanium.UI.createTab({  
-    //icon:'KS_nav_views.png',
-    title:'Readings',
-    window:win1
-});
-
-var label1 = Titanium.UI.createLabel({
-	color:'#999',
-	text:'Readings',
-	font:{fontSize:20,fontFamily:'Helvetica Neue'},
-	textAlign:'center',
-	width:'auto'
-});
-
-win1.add(label1);
-
-//
-// create 'Deck' tab and root window
-//
-var win2 = Titanium.UI.createWindow({  
-    title:'Deck',
-    backgroundColor:'#fff'
-});
-var tab2 = Titanium.UI.createTab({  
-    //icon:'KS_nav_ui.png',
-    title:'Deck',
-    window:win2
-});
-
-var label2 = Titanium.UI.createLabel({
-	color:'#999',
-	text:'Deck',
-	font:{fontSize:20,fontFamily:'Helvetica Neue'},
-	textAlign:'center',
-	width:'auto'
-});
-
-win2.add(label2);
-
-
-//
-// create 'History' tab and root window
-//
-var win3 = Titanium.UI.createWindow({  
-    title:'History',
-    backgroundColor:'#fff'
-});
-var tab3 = Titanium.UI.createTab({  
-    //icon:'KS_nav_ui.png',
-    title:'History',
-    window:win3
-});
-
-var label3 = Titanium.UI.createLabel({
-	color:'#999',
-	text:'History',
-	font:{fontSize:20,fontFamily:'Helvetica Neue'},
-	textAlign:'center',
-	width:'auto'
-});
-
-win3.add(label3);
-
-
-//
-// create 'Info' tab and root window
-//
-var win4 = Titanium.UI.createWindow({  
-    title:'Info',
-    backgroundColor:'#fff'
-});
-var tab4 = Titanium.UI.createTab({  
-    //icon:'KS_nav_ui.png',
-    title:'Info',
-    window:win4
-});
-
-var label4 = Titanium.UI.createLabel({
-	color:'#999',
-	text:'Info',
-	font:{fontSize:20,fontFamily:'Helvetica Neue'},
-	textAlign:'center',
-	width:'auto'
-});
-
-win4.add(label4);
-
-//
-//  add tabs
-//
-tabGroup.addTab(tab1);  
-tabGroup.addTab(tab2);
-tabGroup.addTab(tab3);
-tabGroup.addTab(tab4);  
-
-
-// open tab group
-tabGroup.open();
+	var ApplicationTabGroup = require('ApplicationTabGroup');
+	new ApplicationTabGroup().open();
+})();

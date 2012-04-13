@@ -8,14 +8,14 @@
 #define STRING(x) _QUOTEME(x)
 
 NSString * const TI_APPLICATION_DEPLOYTYPE = @"development";
-NSString * const TI_APPLICATION_ID = @"com.plebeianapps.cardpuller";
-NSString * const TI_APPLICATION_PUBLISHER = @"jseav19";
-NSString * const TI_APPLICATION_URL = @"http://";
+NSString * const TI_APPLICATION_ID = @"com.plebeianapps.CardPuller";
+NSString * const TI_APPLICATION_PUBLISHER = @"id";
+NSString * const TI_APPLICATION_URL = @"http://plebeianapps.com";
 NSString * const TI_APPLICATION_NAME = @"CardPuller";
 NSString * const TI_APPLICATION_VERSION = @"1.0";
 NSString * const TI_APPLICATION_DESCRIPTION = @"not specified";
-NSString * const TI_APPLICATION_COPYRIGHT = @"2012 by jseav19";
-NSString * const TI_APPLICATION_GUID = @"2a5de86a-0862-4fe2-8129-50bb5631ac67";
+NSString * const TI_APPLICATION_COPYRIGHT = @"2012 by id";
+NSString * const TI_APPLICATION_GUID = @"49406a0a-cfac-46c1-be9a-d9aaa8c8fe70";
 BOOL const TI_APPLICATION_ANALYTICS = true;
 
 #ifdef TARGET_IPHONE_SIMULATOR

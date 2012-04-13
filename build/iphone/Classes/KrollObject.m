@@ -447,9 +447,8 @@ TiValueRef KrollGetProperty(TiContextRef jsContext, TiObjectRef object, TiString
 		}
 
 		TiValueRef jsResult = ConvertIdTiValue([o context],result);
-		if ( ([result isKindOfClass:[KrollObject class]] &&
+		if ([result isKindOfClass:[KrollObject class]] &&
 				![result isKindOfClass:[KrollCallback class]] && [[result target] isKindOfClass:[TiProxy class]])
-			|| ([result isKindOfClass:[TiProxy class]]) )
 		{
 			[o noteObject:(TiObjectRef)jsResult forTiString:prop context:jsContext];
 		}

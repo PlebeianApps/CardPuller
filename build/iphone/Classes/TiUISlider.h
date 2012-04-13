@@ -16,10 +16,6 @@
 	UISlider *sliderView;
 	NSDate* lastTouchUp;
 	NSTimeInterval lastTimeInterval;
-	
-	UIControlState thumbImageState;
-	UIControlState rightTrackImageState;
-	UIControlState leftTrackImageState;
 }
 
 - (IBAction)sliderChanged:(id)sender;

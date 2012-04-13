@@ -375,8 +375,6 @@ CFMutableSetRef	krollBridgeRegistry = nil;
 
 - (void)evalFileOnThread:(NSString*)path context:(KrollContext*)context_ 
 {
-    NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
-    
 	NSError *error = nil;
 	TiValueRef exception = NULL;
 	
@@ -464,8 +462,6 @@ CFMutableSetRef	krollBridgeRegistry = nil;
 	
 	TiStringRelease(jsCode);
 	TiStringRelease(jsURL);
-    
-    [pool release];
 }
 
 - (void)evalFile:(NSString*)path callback:(id)callback selector:(SEL)selector
@@ -503,6 +499,17 @@ CFMutableSetRef	krollBridgeRegistry = nil;
 			 eventObject:obj thisObject:sourceObject];
 	[context enqueue:newEvent];
 	[newEvent release];
+}
+
+-(void)injectPatches
+{
+	// called to inject any CardPuller patches in JS before a context is loaded... nice for 
+	// setting up backwards compat type APIs
+	
+	NSMutableString *js = [[NSMutableString alloc] init];
+	[js appendString:@"function alert(msg) { Ti.UI.createAlertDialog({title:'Alert',message:msg}).show(); };"];
+	[self evalJSWithoutResult:js];
+	[js release];
 }
 
 -(void)shutdown:(NSCondition*)condition
@@ -546,8 +553,6 @@ CFMutableSetRef	krollBridgeRegistry = nil;
 -(void)didStartNewContext:(KrollContext*)kroll
 {
 	// create CardPuller global object
-    NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
-    
 	NSString *basePath = (url==nil) ? [TiHost resourcePath] : [[[url path] stringByDeletingLastPathComponent] stringByAppendingPathComponent:@"."];
 	_cardpuller = [[CardPullerObject alloc] initWithContext:kroll host:host context:self baseURL:[NSURL fileURLWithPath:basePath]];
 	
@@ -582,16 +587,16 @@ CFMutableSetRef	krollBridgeRegistry = nil;
 				[ti setStaticValue:ko forKey:key purgable:NO];
 			}
 		}
+		[self injectPatches];
 		[self evalFile:[url path] callback:self selector:@selector(booted)];	
 	}
 	else 
 	{
 		// now load the app.js file and get started
 		NSURL *startURL = [host startURL];
+		[self injectPatches];
 		[self evalFile:[startURL absoluteString] callback:self selector:@selector(booted)];
 	}
-    
-    [pool release];
 }
 
 -(void)willStopNewContext:(KrollContext*)kroll

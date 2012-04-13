@@ -14,12 +14,12 @@
 
 @interface TiUIiOSAdViewProxy : TiUIViewProxy {
 
+@private
+
 }
 
-// Need these for sanity checking and constants, so they
-// must be class-available rather than instance-available
-+(NSString*)portraitSize;
-+(NSString*)landscapeSize;
+@property(nonatomic,assign,readonly) NSString *SIZE_320x50;
+@property(nonatomic,assign,readonly) NSString *SIZE_480x32;
 
 @end
 

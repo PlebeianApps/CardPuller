@@ -145,7 +145,6 @@ static NSString * const kCardPullerJavascript = @"Ti.App={};Ti.API={};Ti.App._li
 
 -(void)frameSizeChanged:(CGRect)frame bounds:(CGRect)bounds
 {
-    [super frameSizeChanged:frame bounds:bounds];
 	if (webview!=nil)
 	{
 		[TiUtils setView:webview positionRect:bounds];

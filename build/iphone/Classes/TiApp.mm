@@ -199,7 +199,7 @@ TI_INLINE void waitForMemoryPanicCleared();   //WARNING: This must never be run 
 
 - (void)boot
 {
-	NSLog(@"[INFO] %@/%@ (%s.a24502a)",TI_APPLICATION_NAME,TI_APPLICATION_VERSION,TI_VERSION_STR);
+	NSLog(@"[INFO] %@/%@ (%s.fbdc96f)",TI_APPLICATION_NAME,TI_APPLICATION_VERSION,TI_VERSION_STR);
 	
 	sessionId = [[TiUtils createUUID] retain];
 	TITANIUM_VERSION = [[NSString stringWithCString:TI_VERSION_STR encoding:NSUTF8StringEncoding] retain];
@@ -653,8 +653,7 @@ TI_INLINE void waitForMemoryPanicCleared();   //WARNING: This must never be run 
 		[proxy performSelector:@selector(endBackground)];
 		[runningServices removeObject:proxy];
 	}
-
-	[self checkBackgroundServices];
+	
 	RELEASE_TO_NIL(runningServices);
 }
 
@@ -676,11 +675,7 @@ TI_INLINE void waitForMemoryPanicCleared();   //WARNING: This must never be run 
 	{
 		backgroundServices = [[NSMutableArray alloc] initWithCapacity:1];
 	}
-	
-	//Only add if it isn't already added
-	if (![backgroundServices containsObject:proxy]) {
-		[backgroundServices addObject:proxy];
-	}
+	[backgroundServices addObject:proxy];
 }
 
 -(void)checkBackgroundServices
@@ -702,13 +697,13 @@ TI_INLINE void waitForMemoryPanicCleared();   //WARNING: This must never be run 
 -(void)unregisterBackgroundService:(TiProxy*)proxy
 {
 	[backgroundServices removeObject:proxy];
-	[runningServices removeObject:proxy];
 	[self checkBackgroundServices];
 }
 
 -(void)stopBackgroundService:(TiProxy *)proxy
 {
 	[runningServices removeObject:proxy];
+	[backgroundServices removeObject:proxy];
 	[self checkBackgroundServices];
 }
 

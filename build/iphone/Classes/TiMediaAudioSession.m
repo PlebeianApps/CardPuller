@@ -110,26 +110,6 @@ void TiAudioSessionInputAvailableCallback(void* inUserData, AudioSessionProperty
 
 @implementation TiMediaAudioSession
 
--(void)deactivateSession
-{
-    // deregister from audio route changes
-    AudioSessionRemovePropertyListenerWithUserData(kAudioSessionProperty_AudioRouteChange, TiAudioSessionAudioRouteChangeCallback, self);
-    //deregister from audio volume changes
-    AudioSessionRemovePropertyListenerWithUserData(kAudioSessionProperty_CurrentHardwareOutputVolume,TiAudioSessionAudioVolumeCallback,self);
-    //deregister from input availability changes
-    AudioSessionRemovePropertyListenerWithUserData(kAudioSessionProperty_AudioInputAvailable,TiAudioSessionInputAvailableCallback,self);
-    AudioSessionSetActive(false);
-}
-
-- (void)dealloc {
-    if ([self isActive]) {
-        NSLog(@"[WARN] AudioSession being deallocated is still active");
-        [self deactivateSession];
-    }
-    RELEASE_TO_NIL(lock);
-    [super dealloc];
-}
-
 -(id)init
 {
 	if (self = [super init])
@@ -319,7 +299,7 @@ void TiAudioSessionInputAvailableCallback(void* inUserData, AudioSessionProperty
 	count--;
 	if (count == 0)
 	{
-        [self deactivateSession];
+		AudioSessionSetActive(false);
 	}
 #ifdef DEBUG	
 	NSAssert(count >= 0, @"stopAudioSession called too many times");

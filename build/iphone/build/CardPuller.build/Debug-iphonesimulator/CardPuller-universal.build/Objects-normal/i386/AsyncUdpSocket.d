@@ -1,3 +1,3 @@
 dependencies: \
-  /Users/jseav19/Documents/Titanium\ Studio\ Workspace/CardPuller/build/iphone/Classes/AsyncUdpSocket.m \
-  /Users/jseav19/Documents/Titanium\ Studio\ Workspace/CardPuller/build/iphone/Classes/AsyncUdpSocket.h
+  /Users/id/Personal/Work/DesignJobs/Plebeian/Titanium/CardPuller/build/iphone/Classes/AsyncUdpSocket.m \
+  /Users/id/Personal/Work/DesignJobs/Plebeian/Titanium/CardPuller/build/iphone/Classes/AsyncUdpSocket.h

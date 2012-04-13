@@ -54,12 +54,17 @@ extern NSString * const TI_APPLICATION_ANALYTICS;
 	{
 		[TiUtils setView:[self adview] positionRect:bounds];
 	}
-    [super frameSizeChanged:frame bounds:bounds];
 }
 
--(void)setAdSize:(NSString*)sizeName
+-(NSString*)size
 {
-    [self adview].currentContentSizeIdentifier = sizeName;
+	return [self adview].currentContentSizeIdentifier;
+}
+
+-(void)setSize:(id)arg
+{
+	ENSURE_SINGLE_ARG(arg,NSString);
+	[self adview].currentContentSizeIdentifier = arg;
 }
 
 #pragma mark Public APIs

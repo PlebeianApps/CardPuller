@@ -66,7 +66,6 @@
 	{
 		[TiUtils setView:child positionRect:bounds];
 	}
-    [super frameSizeChanged:frame bounds:bounds];
 }
 
 // Largely stolen from TiUIImageView, but it's different enough that we can't make a common version...

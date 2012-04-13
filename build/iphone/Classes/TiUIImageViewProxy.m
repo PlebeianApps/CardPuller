@@ -162,12 +162,11 @@ USE_VIEW_FOR_AUTO_HEIGHT
 
 -(void)setImage:(id)newImage
 {
-    id image = newImage;
-    if ([image isEqual:@""])
-    {
-        image = nil;
-    }
-    [self replaceValue:image forKey:@"image" notification:YES];
+	if ([newImage isEqual:@""])
+	{
+		newImage = nil;
+	}
+	[self replaceValue:[self sanitizeURL:newImage] forKey:@"image" notification:YES];
 }
 
 -(void)startImageLoad:(NSURL *)url;

@@ -132,7 +132,6 @@
 {
 	//Treat this as a size change
 	[(TiViewProxy *)[self proxy] willChangeSize];
-    [super frameSizeChanged:frame bounds:visibleBounds];
 }
 
 -(void)setContentWidth_:(id)value
@@ -177,10 +176,10 @@
 	[[self scrollView] setAlwaysBounceVertical:[TiUtils boolValue:value]];
 }
 
--(void)setContentOffset_:(id)value withObject:(id)property
+-(void)setContentOffset_:(id)value
 {
-    CGPoint newOffset = [TiUtils pointValue:value];
-	BOOL animated = [TiUtils boolValue:@"animated" properties:property def:(scrollView !=nil)];
+	CGPoint newOffset = [TiUtils pointValue:value];
+	BOOL animated = scrollView != nil;
 	[[self scrollView] setContentOffset:newOffset animated:animated];
 }
 
@@ -258,10 +257,8 @@
 
 -(void)scrollToShowView:(TiUIView *)firstResponderView withKeyboardHeight:(CGFloat)keyboardTop
 {
-    if ([scrollView isScrollEnabled]) {
-        CGRect responderRect = [wrapperView convertRect:[firstResponderView bounds] fromView:firstResponderView];
-        OffsetScrollViewForRect(scrollView,keyboardTop,minimumContentHeight,responderRect);
-    }
+	CGRect responderRect = [wrapperView convertRect:[firstResponderView bounds] fromView:firstResponderView];
+	OffsetScrollViewForRect(scrollView,keyboardTop,minimumContentHeight,responderRect);
 }
 
 -(void)keyboardDidShowAtHeight:(CGFloat)keyboardTop forView:(TiUIView *)firstResponderView

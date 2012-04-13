@@ -248,7 +248,6 @@
 -(void)frameSizeChanged:(CGRect)frame bounds:(CGRect)bounds
 {
 	[TiUtils setView:textWidgetView positionRect:bounds];
-    [super frameSizeChanged:frame bounds:bounds];
 }
 
 - (void) dealloc

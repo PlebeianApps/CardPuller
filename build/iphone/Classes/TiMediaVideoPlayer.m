@@ -120,7 +120,6 @@
 {
 	self.frame = CGRectIntegral(self.frame);
 	[TiUtils setView:[controller view] positionRect:bounds];
-    [super frameSizeChanged:frame bounds:bounds];
 }
 
 @end

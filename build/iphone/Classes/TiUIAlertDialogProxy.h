@@ -13,6 +13,4 @@
 	UIAlertView *alert;
 }
 
--(void)show:(id)args;
-
 @end

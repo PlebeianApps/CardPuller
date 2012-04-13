@@ -584,10 +584,12 @@
 	if(!keyboardVisible && !updatingAccessoryView)
 	{
 		//Set endFrame's origin and width to what you'd imagine the keyboard placed.
-		UIView * ourView = [self viewForKeyboardAccessory];
-		CGRect ourBounds = [ourView bounds];
-		ourBounds.origin.y += ourBounds.size.height;
-		endFrame = [ourView convertRect:ourBounds toView:nil];
+		CGRect ourBounds = [[self view] bounds]; //TODO: Since reposition subviews is always called right after
+		// [self resizeView], which returns [[self view] bounds], maybe we should call that here? Shrug.
+		endFrame.origin.x = ourBounds.origin.x;
+		endFrame.origin.y = ourBounds.origin.y + ourBounds.size.height;
+		endFrame.size.width = ourBounds.size.width;
+		
 		updatingAccessoryView = YES;
 		[self performSelector:@selector(handleNewKeyboardStatus) withObject:nil afterDelay:0.0];
 	}
@@ -889,8 +891,10 @@
 		startingFrame.origin.y = startingCenter.y - startingFrame.size.height/2.0;
 	}
 
-	startFrame = startingFrame;
-	endFrame = endingFrame;
+	UIView * ourView = [self viewForKeyboardAccessory];
+
+	startFrame = [ourView convertRect:startingFrame fromView:nil];
+	endFrame = [ourView convertRect:endingFrame fromView:nil];
 }
 
 -(void) placeView:(UIView *)targetView nearTopOfRect:(CGRect)targetRect aboveTop:(BOOL)aboveTop
@@ -912,19 +916,17 @@
 -(void) handleNewKeyboardStatus
 {
 	updatingAccessoryView = NO;
-	UIView * ourView = [self viewForKeyboardAccessory];
-	CGRect endingFrame = [ourView convertRect:endFrame fromView:nil];
 
 	//Sanity check. Look at our focused proxy, and see if we mismarked it as leaving.
 	TiUIView * scrolledView;	//We check at the update anyways.
 
 	UIView * focusedToolbar = [self keyboardAccessoryViewForProxy:keyboardFocusedProxy withView:&scrolledView];
-	CGRect focusedToolbarBounds = CGRectMake(0, 0, endingFrame.size.width, [keyboardFocusedProxy keyboardAccessoryHeight]);
+	CGRect focusedToolbarBounds = CGRectMake(0, 0, endFrame.size.width, [keyboardFocusedProxy keyboardAccessoryHeight]);
 	[focusedToolbar setBounds:focusedToolbarBounds];
 
 	if(scrolledView != nil)	//If this isn't IN the toolbar, then we update the scrollviews to compensate.
 	{
-		CGFloat keyboardHeight = endingFrame.origin.y;
+		CGFloat keyboardHeight = endFrame.origin.y;
 		if(focusedToolbar != nil){
 			keyboardHeight -= focusedToolbarBounds.size.height;
 		}
@@ -955,14 +957,9 @@
 	}
 
 	//This is if the keyboard is hiding or showing due to hardware.
-	if ((accessoryView != nil) && !CGRectEqualToRect(targetedFrame, endingFrame))
+	if ((accessoryView != nil) && !CGRectEqualToRect(targetedFrame, endFrame))
 	{
-		targetedFrame = endingFrame;
-		if([accessoryView superview] != ourView)
-		{
-			targetedFrame = [ourView convertRect:endingFrame toView:[accessoryView superview]];
-		}
-
+		targetedFrame = endFrame;
 		[UIView beginAnimations:@"update" context:accessoryView];
 		if (keyboardVisible)
 		{
@@ -976,7 +973,7 @@
 		}
 
 		[UIView setAnimationDelegate:self];
-		[self placeView:accessoryView nearTopOfRect:targetedFrame aboveTop:YES];
+		[self placeView:accessoryView nearTopOfRect:endFrame aboveTop:YES];
 		[UIView commitAnimations];
 	}
 
@@ -985,17 +982,17 @@
 	if (enteringAccessoryView != nil)
 	{
 		//Start animation to put it into place.
-		if([enteringAccessoryView superview] != ourView)
+		if([enteringAccessoryView superview] != [self viewForKeyboardAccessory])
 		{
-			[self placeView:enteringAccessoryView nearTopOfRect:[ourView convertRect:startFrame fromView:nil] aboveTop:NO];
+			[self placeView:enteringAccessoryView nearTopOfRect:startFrame aboveTop:NO];
 			[[self viewForKeyboardAccessory] addSubview:enteringAccessoryView];
 		}
-		targetedFrame = endingFrame;
+		targetedFrame = endFrame;
 		[UIView beginAnimations:@"enter" context:enteringAccessoryView];
 		[UIView setAnimationDuration:enterDuration];
 		[UIView setAnimationCurve:enterCurve];
 		[UIView setAnimationDelegate:self];
-		[self placeView:enteringAccessoryView nearTopOfRect:endingFrame aboveTop:YES];
+		[self placeView:enteringAccessoryView nearTopOfRect:endFrame aboveTop:YES];
 		[UIView commitAnimations];
 		accessoryView = enteringAccessoryView;
 		enteringAccessoryView = nil;
@@ -1006,7 +1003,7 @@
 		[UIView setAnimationDuration:leaveDuration];
 		[UIView setAnimationCurve:leaveCurve];
 		[UIView setAnimationDelegate:self];
-		[self placeView:leavingAccessoryView nearTopOfRect:endingFrame aboveTop:NO];
+		[self placeView:leavingAccessoryView nearTopOfRect:endFrame aboveTop:NO];
 		[UIView commitAnimations];
 	}
 
@@ -1103,8 +1100,7 @@
 
 	if(scrolledView != nil)	//If this isn't IN the toolbar, then we update the scrollviews to compensate.
 	{
-		UIView * ourView = [self viewForKeyboardAccessory];
-		CGFloat keyboardHeight = [ourView convertRect:endFrame fromView:nil].origin.y;
+		CGFloat keyboardHeight = endFrame.origin.y;
 		UIView * possibleScrollView = [scrolledView superview];
 		UIView<TiUIScrollView> * confirmedScrollView = nil;
 		while (possibleScrollView != nil)

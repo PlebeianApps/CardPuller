@@ -14,7 +14,7 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>com.plebeianapps.cardpuller</string>
+			<string>com.plebeianapps.CardPuller</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>cardpuller</string>
@@ -23,7 +23,7 @@
 		</dict>
 	</array>
 	<key>CFBundleIdentifier</key>
-	<string>com.plebeianapps.cardpuller</string>
+	<string>com.plebeianapps.CardPuller</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>

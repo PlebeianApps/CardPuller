@@ -144,7 +144,7 @@ extern NSString * const TI_APPLICATION_DEPLOYTYPE;
 {
 	if (request!=nil && connected)
 	{
-		[request clearDelegatesAndCancel];
+		[request cancel];
 	}
 	RELEASE_TO_NIL(url);
 	RELEASE_TO_NIL(request);
@@ -335,7 +335,7 @@ extern NSString * const TI_APPLICATION_DEPLOYTYPE;
 	{
 		connected = NO;
 		[[TiApp app] stopNetwork];
-		[request clearDelegatesAndCancel];
+		[request cancel];
 		[self forgetSelf];
 	}
 }
@@ -571,7 +571,8 @@ extern NSString * const TI_APPLICATION_DEPLOYTYPE;
     
 	if (request!=nil)
 	{
-        return [TiUtils getResponseHeader:args fromHeaders:[request responseHeaders]];
+        NSString* header = [TiUtils caseCorrect:args];
+		return [[request responseHeaders] objectForKey:header];
 	}
 	return nil;
 }

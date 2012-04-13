@@ -130,7 +130,7 @@
 	{
 		type = TiBlobTypeFile;
 		path = [path_ retain];
-		mimetype = [[Mimetypes mimeTypeForExtension:path] retain];
+		mimetype = [Mimetypes mimeTypeForExtension:path];
 	}
 	return self;
 }

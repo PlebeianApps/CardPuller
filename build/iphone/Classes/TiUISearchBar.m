@@ -45,7 +45,6 @@
 {
 	[[self searchBar] setFrame:bounds];
 	[backgroundLayer setFrame:bounds];
-    [super frameSizeChanged:frame bounds:bounds];
 }
 
 -(void)setDelegate:(id<UISearchBarDelegate>)delegate_

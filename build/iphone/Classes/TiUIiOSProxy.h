@@ -16,6 +16,8 @@
 
 #endif
 
+
+
 @interface TiUIiOSProxy : TiProxy {
 @private
 
@@ -23,10 +25,6 @@
 
 #ifdef USE_TI_UIIOSADVIEW
 -(id)createAdView:(id)args;
-
-@property(nonatomic,readonly) NSString* AD_SIZE_PORTRAIT;
-@property(nonatomic,readonly) NSString* AD_SIZE_LANDSCAPE;
-
 #endif
 #ifdef USE_TI_UIIOS3DMATRIX
 -(id)create3DMatrix:(id)args;

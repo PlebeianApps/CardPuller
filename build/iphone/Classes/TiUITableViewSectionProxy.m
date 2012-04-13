@@ -113,12 +113,12 @@
 
 -(NSString*)headerTitle
 {
-	return [TiUtils stringValue:[super valueForUndefinedKey:@"headerTitle"]];
+	return [super valueForUndefinedKey:@"headerTitle"];
 }
 
 -(NSString*)footerTitle
 {
-	return [TiUtils stringValue:[super valueForUndefinedKey:@"footerTitle"]];
+	return [super valueForUndefinedKey:@"footerTitle"];
 }
 
 #pragma mark Delegate 

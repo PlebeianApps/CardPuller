@@ -7,6 +7,9 @@
  * WARNING: This is generated code. Modify at your own risk and without support.
  */
 
+extern const NSString * htmlMimeType;
+extern const NSString * textMimeType;
+extern const NSString * jpegMimeType;
 extern const NSString * svgMimeType;
 
 

@@ -14,7 +14,8 @@
 {
     NSMutableDictionary * _property = [[NSMutableDictionary alloc] init];
 
+    [_property setObject:[TiUtils stringValue:@"rhino"] forKey:@"ti.android.runtime"];
 
-    return NULL;
+    return _property;
 }
 @end

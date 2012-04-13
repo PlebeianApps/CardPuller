@@ -1,1 +1,1 @@
-/Users/jseav19/Documents/Titanium Studio Workspace/CardPuller/Resources/app.js
+/Users/id/Personal/Work/DesignJobs/Plebeian/Titanium/CardPuller/Resources/app.js

@@ -14,7 +14,6 @@
 
 @interface TiAppiOSProxy : TiProxy {
 @private
-	NSMutableDictionary *backgroundServices;
 }
 
 @end
