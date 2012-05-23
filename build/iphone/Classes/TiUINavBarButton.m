@@ -124,7 +124,7 @@ DEFINE_EXCEPTIONS
 	}
 	proxy = proxy_; // Don't retain
 
-	self.width = [TiUtils floatValue:[proxy_ valueForKey:@"width"]];
+	self.width = [TiUtils floatValue:[proxy_ valueForKey:@"width"] def:0.0];
 	//A width of 0 is treated as Auto by the iPhone OS, so this is safe.
 
 	// we need to listen manually to proxy change events if we want to be
@@ -207,19 +207,23 @@ DEFINE_EXCEPTIONS
 	
 	if ([key isEqualToString:@"title"])
 	{
-		[changeView performSelectorOnMainThread:@selector(setTitle_:) withObject:newValue waitUntilDone:NO];
+		TiThreadPerformOnMainThread(^{[changeView setTitle_:newValue];}, NO);
+		return;
 	}
-	else if ([key isEqualToString:@"image"])
+	if ([key isEqualToString:@"image"])
 	{
-		[changeView performSelectorOnMainThread:@selector(setImage_:) withObject:newValue waitUntilDone:NO];
+		TiThreadPerformOnMainThread(^{[changeView setImage_:newValue];}, NO);
+		return;
 	}
-	else if ([key isEqualToString:@"width"])
+	if ([key isEqualToString:@"width"])
 	{
-		[changeView performSelectorOnMainThread:@selector(setWidth_:) withObject:newValue waitUntilDone:NO];
+		TiThreadPerformOnMainThread(^{[changeView setWidth_:newValue];}, NO);
+		return;
 	}
-	else if ([key isEqualToString:@"enabled"])
+	if ([key isEqualToString:@"enabled"])
 	{
-		[self performSelectorOnMainThread:@selector(setEnabled_:) withObject:newValue waitUntilDone:NO];
+		TiThreadPerformOnMainThread(^{[self	setEnabled_:newValue];}, NO);
+		return;
 	}
 }
 

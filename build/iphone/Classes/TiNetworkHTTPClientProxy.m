@@ -59,7 +59,9 @@ NSStringEncoding ExtractEncodingFromData(NSData * inputData)
 			TRYENCODING("iso-8859-1",10,NSISOLatin1StringEncoding);
 			TRYENCODING("utf-8",5,NSUTF8StringEncoding);
 			TRYENCODING("shift-jis",9,NSShiftJISStringEncoding);
+			TRYENCODING("shift_jis",9,NSShiftJISStringEncoding);
 			TRYENCODING("x-euc",5,NSJapaneseEUCStringEncoding);
+			TRYENCODING("euc-jp",6,NSJapaneseEUCStringEncoding);
 			TRYENCODING("windows-1250",12,NSWindowsCP1251StringEncoding);
 			TRYENCODING("windows-1251",12,NSWindowsCP1252StringEncoding);
 			TRYENCODING("windows-1253",12,NSWindowsCP1253StringEncoding);
@@ -84,7 +86,9 @@ NSStringEncoding ExtractEncodingFromData(NSData * inputData)
 		TRYENCODING("iso-8859-1",10,NSISOLatin1StringEncoding);
 		TRYENCODING("utf-8",5,NSUTF8StringEncoding);
 		TRYENCODING("shift-jis",9,NSShiftJISStringEncoding);
+		TRYENCODING("shift_jis",9,NSShiftJISStringEncoding);
 		TRYENCODING("x-euc",5,NSJapaneseEUCStringEncoding);
+		TRYENCODING("euc-jp",6,NSJapaneseEUCStringEncoding);
 		TRYENCODING("windows-1250",12,NSWindowsCP1251StringEncoding);
 		TRYENCODING("windows-1251",12,NSWindowsCP1252StringEncoding);
 		TRYENCODING("windows-1253",12,NSWindowsCP1253StringEncoding);
@@ -108,6 +112,11 @@ extern NSString * const TI_APPLICATION_DEPLOYTYPE;
 		validatesSecureCertificate = [[NSNumber alloc] initWithBool:NO];
 	}
 	return self;
+}
+
+-(void)_configure
+{
+    [self initializeProperty:@"cache" defaultValue:NUMBOOL(NO)];
 }
 
 -(void)setOnload:(KrollCallback *)callback
@@ -144,7 +153,7 @@ extern NSString * const TI_APPLICATION_DEPLOYTYPE;
 {
 	if (request!=nil && connected)
 	{
-		[request cancel];
+		[request clearDelegatesAndCancel];
 	}
 	RELEASE_TO_NIL(url);
 	RELEASE_TO_NIL(request);
@@ -335,7 +344,7 @@ extern NSString * const TI_APPLICATION_DEPLOYTYPE;
 	{
 		connected = NO;
 		[[TiApp app] stopNetwork];
-		[request cancel];
+		[request clearDelegatesAndCancel];
 		[self forgetSelf];
 	}
 }
@@ -358,7 +367,12 @@ extern NSString * const TI_APPLICATION_DEPLOYTYPE;
 	}
 	
 	request = [[ASIFormDataRequest requestWithURL:url] retain];	
-    [request setDownloadCache:[ASIDownloadCache sharedCache]];
+    if ([TiUtils boolValue:[self valueForUndefinedKey:@"cache"] def:NO]) {
+        [request setDownloadCache:[ASIDownloadCache sharedCache]];
+    }
+    else {
+        [request setDownloadCache:nil];
+    }
 	[request setDelegate:self];
     if (timeout) {
         NSTimeInterval timeoutVal = [timeout doubleValue] / 1000;
@@ -571,8 +585,7 @@ extern NSString * const TI_APPLICATION_DEPLOYTYPE;
     
 	if (request!=nil)
 	{
-        NSString* header = [TiUtils caseCorrect:args];
-		return [[request responseHeaders] objectForKey:header];
+        return [TiUtils getResponseHeader:args fromHeaders:[request responseHeaders]];
 	}
 	return nil;
 }

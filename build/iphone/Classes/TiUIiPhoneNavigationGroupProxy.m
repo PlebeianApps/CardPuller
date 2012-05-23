@@ -21,7 +21,7 @@
 	{
 		//This is done to insert the top line of the nav bar
 		//underneath the bottom line of the status bar.
-		layoutProperties.top = TiDimensionPixels(-1);
+		layoutProperties.top = TiDimensionDip(-1);
 	}
 	return self;
 }

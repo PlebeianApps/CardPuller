@@ -110,6 +110,11 @@ TI_INLINE void waitForMemoryPanicCleared();   //WARNING: This must never be run 
 
 @synthesize window, remoteNotificationDelegate, controller;
 
++(void)initialize
+{
+	TiThreadInitalize();
+}
+
 + (TiApp*)app
 {
 	return sharedApp;
@@ -199,7 +204,7 @@ TI_INLINE void waitForMemoryPanicCleared();   //WARNING: This must never be run 
 
 - (void)boot
 {
-	NSLog(@"[INFO] %@/%@ (%s.fbdc96f)",TI_APPLICATION_NAME,TI_APPLICATION_VERSION,TI_VERSION_STR);
+	NSLog(@"[INFO] %@/%@ (%s.999c68a)",TI_APPLICATION_NAME,TI_APPLICATION_VERSION,TI_VERSION_STR);
 	
 	sessionId = [[TiUtils createUUID] retain];
 	TITANIUM_VERSION = [[NSString stringWithCString:TI_VERSION_STR encoding:NSUTF8StringEncoding] retain];
@@ -234,7 +239,7 @@ TI_INLINE void waitForMemoryPanicCleared();   //WARNING: This must never be run 
 	{
 		NSLog(@"[DEBUG] application booted in %f ms", ([NSDate timeIntervalSinceReferenceDate]-started) * 1000);
 		fflush(stderr);
-		[self performSelectorOnMainThread:@selector(validator) withObject:nil waitUntilDone:YES];
+		TiThreadPerformOnMainThread(^{[self validator];}, YES);
 	}
 }
 
@@ -314,13 +319,32 @@ TI_INLINE void waitForMemoryPanicCleared();   //WARNING: This must never be run 
     return YES;
 }
 
+-(void)waitForKrollProcessing
+{
+	CGFloat timeLeft = [[UIApplication sharedApplication] backgroundTimeRemaining]-1.0;
+	/*
+	 *	In the extreme edge case of having come back to the app while
+	 *	it's still waiting for Kroll Processing, 
+	 *	backgroundTimeRemaining becomes undefined, and so we have
+	 *	to limit the time left to a sane number in that case.
+	 *	The other reason for the timeLeft limit is to not starve
+	 *	possible later calls for waitForKrollProcessing.
+	 */
+	if (timeLeft > 3.0) {
+		timeLeft = 3.0;
+	}
+	else if(timeLeft < 0.0) {
+		return;
+	}
+	TiThreadProcessPendingMainThreadBlocks(timeLeft, NO, nil);
+}
+
 - (void)applicationWillTerminate:(UIApplication *)application
 {
 	NSNotificationCenter * theNotificationCenter = [NSNotificationCenter defaultCenter];
 
 	//This will send out the 'close' message.
 	[theNotificationCenter postNotificationName:kTiWillShutdownNotification object:self];
-	
 	NSCondition *condition = [[NSCondition alloc] init];
 
 #ifdef USE_TI_UIWEBVIEW
@@ -344,7 +368,8 @@ TI_INLINE void waitForMemoryPanicCleared();   //WARNING: This must never be run 
 
 	//This will shut down the modules.
 	[theNotificationCenter postNotificationName:kTiShutdownNotification object:self];
-	
+	[self waitForKrollProcessing];
+
 	RELEASE_TO_NIL(condition);
 	RELEASE_TO_NIL(kjsBridge);
 #ifdef USE_TI_UIWEBVIEW 
@@ -371,12 +396,12 @@ TI_INLINE void waitForMemoryPanicCleared();   //WARNING: This must never be run 
 	
 	// suspend any image loading
 	[[ImageLoader sharedLoader] suspend];
-	
 	[kjsBridge gc];
 	
 #ifdef USE_TI_UIWEBVIEW
 	[xhrBridge gc];
 #endif 
+	[self waitForKrollProcessing];
 }
 
 - (void)applicationDidBecomeActive:(UIApplication *)application
@@ -418,11 +443,14 @@ TI_INLINE void waitForMemoryPanicCleared();   //WARNING: This must never be run 
         // Do the work associated with the task.
 		[tiapp beginBackgrounding];
     });
-	
+	[self waitForKrollProcessing];
 }
 
 -(void)applicationWillEnterForeground:(UIApplication *)application
 {
+    [sessionId release];
+    sessionId = [[TiUtils createUUID] retain];
+    
 	[[NSNotificationCenter defaultCenter] postNotificationName:kTiResumeNotification object:self];
 	
 	[TiUtils queueAnalytics:@"ti.foreground" name:@"ti.foreground" data:nil];
@@ -540,6 +568,14 @@ TI_INLINE void waitForMemoryPanicCleared();   //WARNING: This must never be run 
 		[windowView addSubview:rootView];
 	}
 
+	/*
+	 *	In iPad (TIMOB 7839) there is a bug in iOS where a text field having
+	 *	focus during a modal presentation can lead to an edge case.
+	 *	The new view is not attached yet, and any current view will be covered
+	 *	by the new modal controller. Because of this, there is no valid reason
+	 *	to have a text field with focus.
+	 */
+	[controller dismissKeyboard];
 
 	UINavigationController *navController = nil; //[(TiRootViewController *)controller focusedViewController];
 	if (navController==nil)
@@ -653,7 +689,8 @@ TI_INLINE void waitForMemoryPanicCleared();   //WARNING: This must never be run 
 		[proxy performSelector:@selector(endBackground)];
 		[runningServices removeObject:proxy];
 	}
-	
+
+	[self checkBackgroundServices];
 	RELEASE_TO_NIL(runningServices);
 }
 
@@ -675,7 +712,11 @@ TI_INLINE void waitForMemoryPanicCleared();   //WARNING: This must never be run 
 	{
 		backgroundServices = [[NSMutableArray alloc] initWithCapacity:1];
 	}
-	[backgroundServices addObject:proxy];
+	
+	//Only add if it isn't already added
+	if (![backgroundServices containsObject:proxy]) {
+		[backgroundServices addObject:proxy];
+	}
 }
 
 -(void)checkBackgroundServices
@@ -697,13 +738,13 @@ TI_INLINE void waitForMemoryPanicCleared();   //WARNING: This must never be run 
 -(void)unregisterBackgroundService:(TiProxy*)proxy
 {
 	[backgroundServices removeObject:proxy];
+	[runningServices removeObject:proxy];
 	[self checkBackgroundServices];
 }
 
 -(void)stopBackgroundService:(TiProxy *)proxy
 {
 	[runningServices removeObject:proxy];
-	[backgroundServices removeObject:proxy];
 	[self checkBackgroundServices];
 }
 

@@ -40,6 +40,7 @@
 @interface TiRootViewController ()
 
 - (UIView *)keyboardAccessoryViewForProxy:(TiViewProxy<TiKeyboardFocusableView> *)visibleProxy withView:(UIView **)proxyView;
+-(UIView*)viewForKeyboardAccessory;
 
 -(void)updateBackground;
 -(void)updateOrientationHistory:(UIInterfaceOrientation)newOrientation;
@@ -256,6 +257,11 @@
 
 #pragma mark UIViewController methods
 
+-(void)dismissKeyboard
+{
+	[keyboardFocusedProxy blur:nil];
+}
+
 -(void)loadView
 {
 	TiRootView *rootView = [[TiRootView alloc] initWithFrame:[[UIScreen mainScreen] applicationFrame]];
@@ -277,6 +283,7 @@
 
 - (void)viewWillAppear:(BOOL)animated;    // Called when the view is about to made visible. Default does nothing
 {
+	TiThreadProcessPendingMainThreadBlocks(0.1, YES, nil);
 	[[viewControllerStack lastObject] viewWillAppear:animated];
 }
 
@@ -314,10 +321,7 @@
 	
 	[backgroundColor release];
 	backgroundColor = [newColor retain];
-	
-	[self performSelectorOnMainThread:@selector(updateBackground) withObject:nil
-						waitUntilDone:NO modes:[NSArray arrayWithObject:NSRunLoopCommonModes]];
-	//The runloopcommonmodes ensures that it'll happen even during tracking.
+	TiThreadPerformOnMainThread(^{[self updateBackground];}, NO);
 }
 
 -(void)setBackgroundImage:(UIImage *)newImage
@@ -329,10 +333,7 @@
 	
 	[backgroundImage release];
 	backgroundImage = [newImage retain];
-	
-	[self performSelectorOnMainThread:@selector(updateBackground) withObject:nil
-						waitUntilDone:NO modes:[NSArray arrayWithObject:NSRunLoopCommonModes]];
-	//The runloopcommonmodes ensures that it'll happen even during tracking.
+	TiThreadPerformOnMainThread(^{[self updateBackground];}, NO);
 }
 
 -(void)updateBackground
@@ -384,11 +385,13 @@
 		[UIView setAnimationDuration:duration];
 	}
     
-    if (newOrientation != oldOrientation && isCurrentlyVisible)
+    if (forceOrientation || ((newOrientation != oldOrientation) && isCurrentlyVisible))
     {
-        [keyboardFocusedProxy blur:nil];
+        TiViewProxy<TiKeyboardFocusableView> *kfvProxy = [keyboardFocusedProxy retain];
+        [kfvProxy blur:nil];
         [ourApp setStatusBarOrientation:newOrientation animated:(duration > 0.0)];
-        [keyboardFocusedProxy focus:nil];
+        [kfvProxy focus:nil];
+        [kfvProxy release];
     }
 
 	UIView * ourView = [self view];
@@ -446,9 +449,25 @@
 		return;
 	}
 
+    UIInterfaceOrientation oldOrientation = [[UIApplication sharedApplication] statusBarOrientation];
+    TiViewProxy<TiKeyboardFocusableView> *kfvProxy = (newOrientation != oldOrientation) ? [[keyboardFocusedProxy retain] autorelease] : nil;
+
     [self updateOrientationHistory:newOrientation];
     
-	[self performSelector:@selector(refreshOrientation) withObject:nil afterDelay:0.0];
+    // We appear to do this in order to synchronize rotation animations with the keyboard.
+    // But there is an interesting edge case where the status bar sometimes updates its orientation,
+    // but does not animate, before we trigger the refresh. This means that the keyboard refuses to
+    // rotate with, if it's focused as first responder (and in fact having it focused as first
+    // responder may be part of what causes the race in conjunction with non-device orienting.
+    // See TIMOB-7998.)
+    
+    TiThreadPerformOnMainThread(^{
+        if ([[UIApplication sharedApplication] statusBarOrientation] != oldOrientation) {
+            forceOrientation = YES;
+        }
+        [self refreshOrientation];
+        forceOrientation = NO;
+    }, NO);
 }
 
 -(void)updateOrientationHistory:(UIInterfaceOrientation)newOrientation
@@ -513,7 +532,55 @@
 {
 	[super didRotateFromInterfaceOrientation:fromInterfaceOrientation];
 }
-
+-(BOOL)isCurrentWindowModal{
+    for (TiWindowProxy * thisWindow in [windowProxies reverseObjectEnumerator])
+	{
+        if ([thisWindow closing] == NO) {
+            if([thisWindow modalFlagValue] == YES){
+                return YES;
+            }
+            else{
+                return NO;
+            }
+        }
+    }
+}
+-(BOOL)isModal {
+    //For detecting windows that are opened modally.
+    BOOL modalFlag = NO;
+    if([self isCurrentWindowModal] == YES){
+        return YES;
+    }
+    
+    //For modal views that was added by the TiApp.mm (ApplicationDelegate)
+    
+    //TODO: modalViewController is being deprecated should use presentedViewcontroller.
+    id modalvc= self.modalViewController;
+    UIViewController *parentController = [modalvc parentViewController];
+    //TODO: As of iOS 5, Apple is phasing out the modal concept in exchange for
+    //'presenting', making all non-Ti modal view controllers claim to have
+    //no parent view controller.
+    
+    if(parentController==nil && [modalvc respondsToSelector:@selector(presentingViewController)]){
+        parentController = [modalvc presentingViewController];
+    }
+    
+    if(parentController == self){
+        modalFlag = YES;
+    }
+    
+    if(modalvc != nil){
+        if ([modalvc isKindOfClass:[UINavigationController class]] && 
+            ![modalvc isKindOfClass:[MFMailComposeViewController class]] &&
+            modalFlag == YES ) 
+        {
+            //Since this is a window opened from inside a modalviewcontroller we need
+            //to let this be oriented by ourselves.
+            modalFlag = NO;
+        }
+    }
+    return modalFlag;
+}
 -(void)refreshOrientationWithDuration:(NSTimeInterval) duration
 {	/*
 	 *	Apple gives us a wonderful method, attemptRotation... in iOS 5 below
@@ -521,29 +588,37 @@
 	 *	way. So we give it a shot, and if that's not enough, consult the
 	 *	rotation history and manually force the rotation.
 	 */
-	TiOrientationFlags oldFlags = allowedOrientations;
-	allowedOrientations = [self orientationFlags];	
-
-	if ([self respondsToSelector:@selector(presentingViewController)]) {
-		[UIViewController attemptRotationToDeviceOrientation];
-	}
-	UIInterfaceOrientation newOrientation = [self lastValidOrientation];	
-	if ((newOrientation == windowOrientation) &&
-		(oldFlags & allowedOrientations))
-	{
+    TiOrientationFlags oldFlags = allowedOrientations;
+    allowedOrientations = [self orientationFlags];	
+    
+    if ([self respondsToSelector:@selector(presentingViewController)]) {
+        [UIViewController attemptRotationToDeviceOrientation];
+    }
+    UIInterfaceOrientation newOrientation = [self lastValidOrientation];	
+    //Check if the view was opened modally, then we shouldnot be handling the rotation.
+    if([self isModal] == YES){
+        //TODO: Needs to look at how we do orientations, tracking windowOrientation
+        //for getting the actual window orientation doesnot seem like the correct for tracking it.
+        windowOrientation = newOrientation;
+        return;
+    }   
+    
+    if ((newOrientation == windowOrientation) &&
+        (oldFlags & allowedOrientations))
+    {
         // If it's the case that the window orientation doesn't match the status bar orientation,
         // move the status bar into the right place.
         if (windowOrientation != [[UIApplication sharedApplication] statusBarOrientation]) {
             [[UIApplication sharedApplication] setStatusBarOrientation:windowOrientation animated:NO];
         }
-		//Nothing to do here.
-		return;
-	}
-	
-	[self manuallyRotateToOrientation:newOrientation duration:duration];
+                
+        if (TI_ORIENTATION_ALLOWED(allowedOrientations, orientationHistory[0])) {
+             //Nothing to do here.
+            return;
+        }
+    }
+    [self manuallyRotateToOrientation:newOrientation duration:duration];
 }
-
-
 
 -(CGRect)resizeView
 {
@@ -584,12 +659,10 @@
 	if(!keyboardVisible && !updatingAccessoryView)
 	{
 		//Set endFrame's origin and width to what you'd imagine the keyboard placed.
-		CGRect ourBounds = [[self view] bounds]; //TODO: Since reposition subviews is always called right after
-		// [self resizeView], which returns [[self view] bounds], maybe we should call that here? Shrug.
-		endFrame.origin.x = ourBounds.origin.x;
-		endFrame.origin.y = ourBounds.origin.y + ourBounds.size.height;
-		endFrame.size.width = ourBounds.size.width;
-		
+		UIView * ourView = [self viewForKeyboardAccessory];
+		CGRect ourBounds = [ourView bounds];
+		ourBounds.origin.y += ourBounds.size.height;
+		endFrame = [ourView convertRect:ourBounds toView:nil];
 		updatingAccessoryView = YES;
 		[self performSelector:@selector(handleNewKeyboardStatus) withObject:nil afterDelay:0.0];
 	}
@@ -752,7 +825,7 @@
 	{
 		[(TiWindowProxy *)[(id)newTopWindow proxy] _tabFocus];
 	}
-	
+    [self refreshOrientation];
 }
 
 -(UIViewController *)focusedViewController
@@ -772,7 +845,10 @@
 	{
 		return;
 	}
-
+    
+    TiViewProxy<TiKeyboardFocusableView> *kfvProxy = [[keyboardFocusedProxy retain] autorelease];
+    [kfvProxy blur:nil];
+    
 	if ([windowProxies containsObject:window])
 	{
 		[[window retain] autorelease];
@@ -830,11 +906,14 @@
 {
 	for (TiWindowProxy * thisWindow in [windowProxies reverseObjectEnumerator])
 	{
-		TiOrientationFlags result = [thisWindow orientationFlags];
-		if (result != TiOrientationNone)
-		{
-			return result;
-		}
+        if ([thisWindow closing] == NO) {
+            TiOrientationFlags result = [thisWindow orientationFlags];
+            if (result != TiOrientationNone)
+            {
+                return result;
+            }
+       }
+        
 	}
 	
 	return [self getDefaultOrientations];
@@ -891,10 +970,8 @@
 		startingFrame.origin.y = startingCenter.y - startingFrame.size.height/2.0;
 	}
 
-	UIView * ourView = [self viewForKeyboardAccessory];
-
-	startFrame = [ourView convertRect:startingFrame fromView:nil];
-	endFrame = [ourView convertRect:endingFrame fromView:nil];
+	startFrame = startingFrame;
+	endFrame = endingFrame;
 }
 
 -(void) placeView:(UIView *)targetView nearTopOfRect:(CGRect)targetRect aboveTop:(BOOL)aboveTop
@@ -916,17 +993,19 @@
 -(void) handleNewKeyboardStatus
 {
 	updatingAccessoryView = NO;
+	UIView * ourView = [self viewForKeyboardAccessory];
+	CGRect endingFrame = [ourView convertRect:endFrame fromView:nil];
 
 	//Sanity check. Look at our focused proxy, and see if we mismarked it as leaving.
 	TiUIView * scrolledView;	//We check at the update anyways.
 
 	UIView * focusedToolbar = [self keyboardAccessoryViewForProxy:keyboardFocusedProxy withView:&scrolledView];
-	CGRect focusedToolbarBounds = CGRectMake(0, 0, endFrame.size.width, [keyboardFocusedProxy keyboardAccessoryHeight]);
+	CGRect focusedToolbarBounds = CGRectMake(0, 0, endingFrame.size.width, [keyboardFocusedProxy keyboardAccessoryHeight]);
 	[focusedToolbar setBounds:focusedToolbarBounds];
 
 	if(scrolledView != nil)	//If this isn't IN the toolbar, then we update the scrollviews to compensate.
 	{
-		CGFloat keyboardHeight = endFrame.origin.y;
+		CGFloat keyboardHeight = endingFrame.origin.y;
 		if(focusedToolbar != nil){
 			keyboardHeight -= focusedToolbarBounds.size.height;
 		}
@@ -935,7 +1014,7 @@
 		
 		while (possibleScrollView != nil)
 		{
-			if ([possibleScrollView conformsToProtocol:@protocol(TiUIScrollView)])
+			if ([possibleScrollView conformsToProtocol:@protocol(TiScrolling)])
 			{
 				if(confirmedScrollViews == nil)
 				{
@@ -949,17 +1028,22 @@
 			possibleScrollView = [possibleScrollView superview];
 		}
 
-		[(UIView<TiUIScrollView> *)[confirmedScrollViews objectAtIndex:0] keyboardDidShowAtHeight:keyboardHeight];
-		for (UIView<TiUIScrollView> * confirmedScrollView in confirmedScrollViews)
+		[(UIView<TiScrolling> *)[confirmedScrollViews objectAtIndex:0] keyboardDidShowAtHeight:keyboardHeight];
+		for (UIView<TiScrolling> * confirmedScrollView in confirmedScrollViews)
 		{
 			[confirmedScrollView scrollToShowView:scrolledView withKeyboardHeight:keyboardHeight];
 		}
 	}
 
 	//This is if the keyboard is hiding or showing due to hardware.
-	if ((accessoryView != nil) && !CGRectEqualToRect(targetedFrame, endFrame))
+	if ((accessoryView != nil) && !CGRectEqualToRect(targetedFrame, endingFrame))
 	{
-		targetedFrame = endFrame;
+		targetedFrame = endingFrame;
+		if([accessoryView superview] != ourView)
+		{
+			targetedFrame = [ourView convertRect:endingFrame toView:[accessoryView superview]];
+		}
+
 		[UIView beginAnimations:@"update" context:accessoryView];
 		if (keyboardVisible)
 		{
@@ -973,7 +1057,7 @@
 		}
 
 		[UIView setAnimationDelegate:self];
-		[self placeView:accessoryView nearTopOfRect:endFrame aboveTop:YES];
+		[self placeView:accessoryView nearTopOfRect:targetedFrame aboveTop:YES];
 		[UIView commitAnimations];
 	}
 
@@ -982,17 +1066,17 @@
 	if (enteringAccessoryView != nil)
 	{
 		//Start animation to put it into place.
-		if([enteringAccessoryView superview] != [self viewForKeyboardAccessory])
+		if([enteringAccessoryView superview] != ourView)
 		{
-			[self placeView:enteringAccessoryView nearTopOfRect:startFrame aboveTop:NO];
+			[self placeView:enteringAccessoryView nearTopOfRect:[ourView convertRect:startFrame fromView:nil] aboveTop:NO];
 			[[self viewForKeyboardAccessory] addSubview:enteringAccessoryView];
 		}
-		targetedFrame = endFrame;
+		targetedFrame = endingFrame;
 		[UIView beginAnimations:@"enter" context:enteringAccessoryView];
 		[UIView setAnimationDuration:enterDuration];
 		[UIView setAnimationCurve:enterCurve];
 		[UIView setAnimationDelegate:self];
-		[self placeView:enteringAccessoryView nearTopOfRect:endFrame aboveTop:YES];
+		[self placeView:enteringAccessoryView nearTopOfRect:endingFrame aboveTop:YES];
 		[UIView commitAnimations];
 		accessoryView = enteringAccessoryView;
 		enteringAccessoryView = nil;
@@ -1003,7 +1087,7 @@
 		[UIView setAnimationDuration:leaveDuration];
 		[UIView setAnimationCurve:leaveCurve];
 		[UIView setAnimationDelegate:self];
-		[self placeView:leavingAccessoryView nearTopOfRect:endFrame aboveTop:NO];
+		[self placeView:leavingAccessoryView nearTopOfRect:endingFrame aboveTop:NO];
 		[UIView commitAnimations];
 	}
 
@@ -1100,14 +1184,15 @@
 
 	if(scrolledView != nil)	//If this isn't IN the toolbar, then we update the scrollviews to compensate.
 	{
-		CGFloat keyboardHeight = endFrame.origin.y;
+		UIView * ourView = [self viewForKeyboardAccessory];
+		CGFloat keyboardHeight = [ourView convertRect:endFrame fromView:nil].origin.y;
 		UIView * possibleScrollView = [scrolledView superview];
-		UIView<TiUIScrollView> * confirmedScrollView = nil;
+		UIView<TiScrolling> * confirmedScrollView = nil;
 		while (possibleScrollView != nil)
 		{
-			if ([possibleScrollView conformsToProtocol:@protocol(TiUIScrollView)])
+			if ([possibleScrollView conformsToProtocol:@protocol(TiScrolling)])
 			{
-				confirmedScrollView = (UIView<TiUIScrollView>*)possibleScrollView;
+				confirmedScrollView = (UIView<TiScrolling>*)possibleScrollView;
 			}
 			possibleScrollView = [possibleScrollView superview];
 		}

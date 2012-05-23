@@ -22,7 +22,7 @@
 
 -(id)currentLanguage
 {
-	return [TiLocale currentLocale];
+	return [TiLocale defaultLocale];
 }
 
 -(id)getCurrentLanguage:(id)arg

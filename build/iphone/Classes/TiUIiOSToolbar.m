@@ -101,7 +101,7 @@
 			}
 			if ([thisProxy conformsToProtocol:@protocol(TiToolbarButton)])
 			{
-				[(id<TiToolbarButton>)thisProxy setToolbar:(TiToolbar*)self.proxy];
+				[(id<TiToolbarButton>)thisProxy setToolbar:(id<TiToolbar>)self.proxy];
 			}
             [thisProxy windowWillOpen];
 			[result addObject:[thisProxy barButtonItem]];

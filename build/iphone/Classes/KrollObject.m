@@ -447,8 +447,9 @@ TiValueRef KrollGetProperty(TiContextRef jsContext, TiObjectRef object, TiString
 		}
 
 		TiValueRef jsResult = ConvertIdTiValue([o context],result);
-		if ([result isKindOfClass:[KrollObject class]] &&
+		if ( ([result isKindOfClass:[KrollObject class]] &&
 				![result isKindOfClass:[KrollCallback class]] && [[result target] isKindOfClass:[TiProxy class]])
+			|| ([result isKindOfClass:[TiProxy class]]) )
 		{
 			[o noteObject:(TiObjectRef)jsResult forTiString:prop context:jsContext];
 		}
@@ -1194,6 +1195,11 @@ TI_INLINE TiStringRef TiStringCreateWithPointerValue(int value)
 		return;
 	}
 
+    // TODO: Enquing safeProtect here may not be enough to guarantee that the object is actually
+    // safely protected "in time" (i.e. it may be GC'd before the safe protect is evaluated
+    // by the queue processor). We need to seriously re-evaluate the memory model and thread
+    // interactions during such.
+    
 	if (![context isKJSThread])
 	{
 		NSOperation * safeProtect = [[NSInvocationOperation alloc] initWithTarget:self

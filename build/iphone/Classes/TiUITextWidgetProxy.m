@@ -26,6 +26,7 @@ DEFINE_DEF_BOOL_PROP(suppressReturn,YES);
 	for (TiViewProxy * thisToolBarItem in keyboardToolbarItems)
 	{
 		[thisToolBarItem windowWillClose];
+        [self forgetProxy:thisToolBarItem];
 	}
 	[super windowWillClose];
 }
@@ -35,6 +36,9 @@ DEFINE_DEF_BOOL_PROP(suppressReturn,YES);
 	[keyboardTiView removeFromSuperview];
 	[keyboardUIToolbar removeFromSuperview];
 	RELEASE_TO_NIL(keyboardTiView);
+    for (TiProxy* proxy in keyboardToolbarItems) {
+        [self forgetProxy:proxy];
+    }
 	RELEASE_TO_NIL(keyboardToolbarItems);
 	RELEASE_TO_NIL(keyboardUIToolbar);
 	[super dealloc];
@@ -84,6 +88,7 @@ DEFINE_DEF_BOOL_PROP(suppressReturn,YES);
 {
 	if (![[self valueForKey:@"value"] isEqual:newValue])
 	{
+        [self contentsWillChange];
 		[self replaceValue:newValue forKey:@"value" notification:NO];
 		[self fireEvent:@"change" withObject:[NSDictionary dictionaryWithObject:newValue forKey:@"value"]];
 	}
@@ -93,7 +98,11 @@ DEFINE_DEF_BOOL_PROP(suppressReturn,YES);
 
 - (CGFloat) keyboardAccessoryHeight
 {
-	return MAX(keyboardAccessoryHeight,40);
+	CGFloat result = MAX(keyboardAccessoryHeight,40);
+	if ([[keyboardTiView proxy] respondsToSelector:@selector(verifyHeight:)]) {
+		result = [(TiViewProxy<LayoutAutosizing>*)[keyboardTiView proxy] verifyHeight:result];
+	}
+	return result;
 }
 
 -(void)setKeyboardToolbarHeight:(id)value
@@ -144,15 +153,39 @@ DEFINE_DEF_BOOL_PROP(suppressReturn,YES);
 
 -(void)setKeyboardToolbar:(id)value
 {
+    // TODO: The entire codebase needs to be evaluated for the following:
+    //
+    // - Any property setter which potentially takes an array of proxies MUST ALWAYS have its
+    // content evaluated to protect them. This is INCREDIBLY CRITICAL and almost certainly a major
+    // source of memory bugs in CardPuller iOS!!!
+    //
+    // - Any property setter which is active on the main thread only MAY NOT protect their object
+    // correctly or in time (see the comment in -[KrollObject noteKeylessKrollObject:]).
+    //
+    // This may have to be done as part of TIMOB-6990 (convert KrollContext to serialized GCD)
+    
+    if ([value isKindOfClass:[NSArray class]]) {
+        for (id item in value) {
+            ENSURE_TYPE(item, TiProxy);
+            [self rememberProxy:item];
+        }
+    }
+    
 	//Because views aren't lock-protected, ANY and all references, even checking if non-nil, should be done in the main thread.
+    
+    // TODO: ENSURE_UI_THREAD needs to be deprecated in favor of more effective and concicse mechanisms
+    // which use the main thread only when necessary to reduce latency.
 	ENSURE_UI_THREAD_1_ARG(value);
 	[self replaceValue:value forKey:@"keyboardToolbar" notification:YES];
-
+    
 	if (value == nil)
 	{
 //TODO: Should we remove these gracefully?
 		[keyboardTiView removeFromSuperview];
 		[keyboardUIToolbar removeFromSuperview];
+        for (TiProxy* proxy in keyboardToolbarItems) {
+            [self forgetProxy:proxy];
+        }
 		RELEASE_TO_NIL(keyboardTiView);
 		RELEASE_TO_NIL(keyboardToolbarItems);
 		[keyboardUIToolbar setItems:nil];
@@ -165,19 +198,24 @@ DEFINE_DEF_BOOL_PROP(suppressReturn,YES);
 		[keyboardTiView removeFromSuperview];
 		RELEASE_TO_NIL(keyboardTiView);
 
-//TODO: Make sure these are actually proxies.
+        // TODO: Check for proxies
 		[keyboardToolbarItems autorelease];
+        for (TiProxy* proxy in keyboardToolbarItems) {
+            [self forgetProxy:proxy];
+        }
+        
 		keyboardToolbarItems = [value copy];
-		if(keyboardUIToolbar != nil){
+		if(keyboardUIToolbar != nil) {
 			[self updateUIToolbar];
-		}
+		}        
 //TODO: If we have focus while this happens, we need to signal an update.
 		return;
 	}
 
 	if ([value isKindOfClass:[TiViewProxy class]])
 	{
-		if (value == keyboardTiView)
+		TiUIView * valueView = [(TiViewProxy *)value view];
+		if (valueView == keyboardTiView)
 		{//Nothing to do here.
 			return;
 		}
@@ -185,10 +223,13 @@ DEFINE_DEF_BOOL_PROP(suppressReturn,YES);
 		[keyboardTiView removeFromSuperview];
 		[keyboardUIToolbar removeFromSuperview];
 		RELEASE_TO_NIL(keyboardTiView);
+        for (TiProxy* proxy in keyboardToolbarItems) {
+            [self forgetProxy:proxy];
+        }
 		RELEASE_TO_NIL(keyboardToolbarItems);
 		[keyboardUIToolbar setItems:nil];
 	
-		keyboardTiView = [value retain];
+		keyboardTiView = [valueView retain];
 //TODO: If we have focus while this happens, we need to signal an update.
 	}
 }
@@ -205,6 +246,18 @@ DEFINE_DEF_BOOL_PROP(suppressReturn,YES);
 
 	return nil;
 }
+
+-(TiDimension)defaultAutoWidthBehavior:(id)unused
+{
+    return TiDimensionAutoSize;
+}
+-(TiDimension)defaultAutoHeightBehavior:(id)unused
+{
+    return TiDimensionAutoSize;
+}
+
+USE_VIEW_FOR_CONTENT_HEIGHT
+USE_VIEW_FOR_CONTENT_WIDTH
 
 
 @end

@@ -23,13 +23,13 @@ function WindowGroup(title) {
 		var readingDescription = new TabWindow('Reading Title');
 		var readingCards = new TabWindow('Reading Cards');
 		var notes = new TabWindow('Notes');
-		var buttonReadings = new NavButton('description');
+		//var buttonReadings = new NavButton('description');
 		var buttonReadingDescription = new NavButton('readingCards');
 		var buttonReadingCards = new NavButton('notes');
-		readings.add(buttonReadings);
+		//readings.add(buttonReadings);
 		readingDescription.add(buttonReadingDescription);
 		readingCards.add(buttonReadingCards);
-		EventListener(buttonReadings,readings,readingDescription);
+		//EventListener(buttonReadings,readings,readingDescription);
 		EventListener(buttonReadingDescription,readings,readingCards);
 		EventListener(buttonReadingCards,readings,notes);
 

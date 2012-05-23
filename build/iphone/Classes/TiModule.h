@@ -11,6 +11,9 @@
 
 @class TiHost;
 
+/**
+ The base class for all CardPuller modules
+ */
 @interface TiModule : TiProxy 
 {
 @protected
@@ -28,18 +31,50 @@
 -(id)createProxy:(NSArray*)args forName:(NSString*)name context:(id<TiEvaluator>)evaluator;
 
 // module related utilities
+
 -(NSString*)moduleId;
 -(BOOL)isJSModule;
 -(NSData*)moduleJS;
+
+/*
+ Converts a resource name in to a URL.
+ @param name The name of the resource.
+ @return The URL of the resource
+ */
 -(NSURL*)moduleResourceURL:(NSString*)name;
+
 -(id)bindCommonJSModule:(NSString*)code;
 -(id)bindCommonJSModuleForPath:(NSURL*)path;
 
 // lifecycle
+
+/**
+ CardPuller Platform calls this method on startup.
+ */
 -(void)startup;
+
+/**
+ CardPuller Platform calls this method on shutdown.
+ @param sender The sender of the event.
+ */
 -(void)shutdown:(id)sender;
+
+/**
+ CardPuller Platform calls this method on suspend.
+ @param sender The sender of the event.
+ */
 -(void)suspend:(id)sender;
+
+/**
+ CardPuller Platform calls this method on resume.
+ @param sender The sender of the event.
+ */
 -(void)resume:(id)sender;
+
+/**
+ Tells the module that it was resumed.
+ @param sender The sender of the event.
+ */
 -(void)resumed:(id)sender;
 
 @end

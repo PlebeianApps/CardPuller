@@ -25,7 +25,7 @@
 
 -(void)cancel:(id)args
 {
-	[[UIApplication sharedApplication] performSelectorOnMainThread:@selector(cancelLocalNotification:) withObject:notification waitUntilDone:NO];
+	TiThreadPerformOnMainThread(^{[[UIApplication sharedApplication] cancelLocalNotification:notification];}, NO);
 }
 
 @end

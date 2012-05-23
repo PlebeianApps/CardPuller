@@ -21,11 +21,11 @@
 
 -(void)dealloc
 {
+	launcher.delegate = nil;
 	if (launcher.editing)
 	{
 		[launcher endEditing];
 	}
-	launcher.delegate = nil;
 	RELEASE_TO_NIL(launcher);
 	[super dealloc];
 }
@@ -52,6 +52,7 @@
 			[launcher recreateButtons];
 		}
 	}
+    [super frameSizeChanged:frame bounds:bounds];
 }
 
 -(void)setEditable_:(id)args

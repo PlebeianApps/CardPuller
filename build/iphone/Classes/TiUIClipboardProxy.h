@@ -14,7 +14,6 @@
 }
 
 #pragma mark internal
--(BOOL)hasData_:(NSString *)mimeType;
 -(id)getData_:(NSString *)mimeType;
 
 -(void)clearData:(id)args;

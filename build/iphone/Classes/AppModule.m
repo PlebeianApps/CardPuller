@@ -26,6 +26,7 @@ extern NSString * const TI_APPLICATION_VERSION;
 extern NSString * const TI_APPLICATION_DESCRIPTION;
 extern NSString * const TI_APPLICATION_COPYRIGHT;
 extern NSString * const TI_APPLICATION_GUID;
+extern BOOL const TI_APPLICATION_ANALYTICS;
 
 @implementation AppModule
 
@@ -358,6 +359,11 @@ extern NSString * const TI_APPLICATION_GUID;
 	return TI_APPLICATION_ID;
 }
 
+-(id)installId
+{
+    return [TiUtils appIdentifier];
+}
+
 -(id)id
 {
 	return TI_APPLICATION_ID;
@@ -406,6 +412,21 @@ extern NSString * const TI_APPLICATION_GUID;
 -(id)guid
 {
 	return TI_APPLICATION_GUID;
+}
+
+-(id)deployType
+{
+	return TI_APPLICATION_DEPLOYTYPE;
+}
+
+-(id)sessionId
+{
+	return [[TiApp app] sessionId];
+}
+
+-(id)analytics
+{
+	return NUMBOOL(TI_APPLICATION_ANALYTICS);
 }
 
 #if defined(USE_TI_APPIOS)

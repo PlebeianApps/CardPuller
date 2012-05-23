@@ -40,7 +40,7 @@
 }
 
 
--(CGFloat)autoWidthForWidth:(CGFloat)value
+-(CGFloat)contentWidthForWidth:(CGFloat)value
 {
 	UIImage * image = [self image];
 	if (image!=nil)
@@ -50,7 +50,7 @@
 	return value;
 }
 
--(CGFloat)autoHeightForWidth:(CGFloat)value
+-(CGFloat)contentHeightForWidth:(CGFloat)value
 {
 	UIImage * image = [self image];
 	if (image!=nil)

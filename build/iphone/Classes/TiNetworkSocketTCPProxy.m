@@ -100,13 +100,13 @@ static NSString* ARG_KEY = @"arg";
     RELEASE_TO_NIL(socket);
 }
 
--(void)setConnectedSocket:(AsyncSocket*)sock
+-(void)setConnectedSocket:(AsyncSocket*)sock onThread:(NSThread*)thread
 {
     [self cleanupSocket];
     internalState = SOCKET_CONNECTED;
     socket = [sock retain];
     [socket setDelegate:self];
-    socketThread = [NSThread currentThread];
+    socketThread = thread;
 }
 
 #define AUTORELEASE_LOOP 5
@@ -149,7 +149,9 @@ static NSString* ARG_KEY = @"arg";
         success = [socket connectToHost:host onPort:[TiUtils intValue:port] error:&err];
     }
     else {
-        success = [socket connectToHost:host onPort:[port intValue] withTimeout:[timeout doubleValue] error:&err];
+        success = [socket connectToHost:host onPort:[port intValue] 
+                            withTimeout:[timeout doubleValue] / 1000
+                                  error:&err];
     }
     
     if (err || !success) {
@@ -215,40 +217,60 @@ static NSString* ARG_KEY = @"arg";
     // is blocking, we need to hold on to the conditions we wait on, and then release them once we're done with them. Introduces some extra
     // overhead, but it probably prevents DUMB CRASHES from happening.
     
-    // 1. Provide the run loop to the new socket...
+    // 1. Provide the run loop to the new socket and wait for it
     NSCondition* tempConditionRef = [readyCondition retain];
     [tempConditionRef lock];
     acceptRunLoop = [NSRunLoop currentRunLoop];
     [tempConditionRef signal];
-    [tempConditionRef unlock];
-    [tempConditionRef release];
     
-    // 2. ... And then wait for it to attach to the run loop.
-    AsyncSocket* newSocket = [[[info objectForKey:SOCK_KEY] retain] autorelease];
-    NSArray* arg = [info objectForKey:ARG_KEY];
-    TiNetworkSocketTCPProxy* proxy = [[[TiNetworkSocketTCPProxy alloc] _initWithPageContext:[self executionContext] args:arg] autorelease];
-    [proxy rememberSelf];
-    [proxy setConnectedSocket:newSocket];
-    
-    // TODO: remoteHost/remotePort & host/port?
-    [proxy setValue:[newSocket connectedHost] forKey:@"host"];
-    [proxy setValue:NUMINT([newSocket connectedPort]) forKey:@"port"];
-    
-    if (accepted != nil) {
-        NSDictionary* event = [NSDictionary dictionaryWithObjectsAndKeys:self,@"socket",proxy,@"inbound",nil];
-        [self _fireEventToListener:@"accepted" withObject:event listener:accepted thisObject:self];
-    }
-    
-    tempConditionRef = [readyCondition retain];
-    [tempConditionRef lock];
     if (!socketReady) {
         [tempConditionRef wait];
     }
+    socketReady = NO;
     [tempConditionRef unlock];
     [tempConditionRef release];
+        
+    // 2. Now, we configure the proxy for the current context (execution if available)
+    // AND allocate it on that kroll context. Otherwise, the memory management doesn't
+    // work and there can be garbage collection issues.
+    AsyncSocket* newSocket = [[[info objectForKey:SOCK_KEY] retain] autorelease];
+    NSArray* arg = [info objectForKey:ARG_KEY];
     
+    __block TiNetworkSocketTCPProxy* proxy = nil;
+    dispatch_semaphore_t contextSemaphore = dispatch_semaphore_create(0);
+    NSThread* acceptingThread = [NSThread currentThread];
+
+    id<TiEvaluator> context = ([self executionContext]) ? [self executionContext] : [self pageContext];
+    KrollContext* krollContext = [context krollContext];
+    void (^createBlock)(void) = ^{
+        proxy = [[TiNetworkSocketTCPProxy alloc] _initWithPageContext:context args:arg];
+        [proxy rememberSelf];
+        [proxy setConnectedSocket:newSocket onThread:acceptingThread];
+        
+        // TODO: remoteHost/remotePort & host/port?
+        [proxy setValue:[newSocket connectedHost] forKey:@"host"];
+        [proxy setValue:NUMINT([newSocket connectedPort]) forKey:@"port"];
+        
+        if (accepted != nil) {
+            NSDictionary* event = [NSDictionary dictionaryWithObjectsAndKeys:self,@"socket",proxy,@"inbound",nil];
+            [self _fireEventToListener:@"accepted" withObject:event listener:accepted thisObject:self];
+        }
+        dispatch_semaphore_signal(contextSemaphore);
+    };
+    
+    [krollContext invokeBlockOnThread:createBlock];
+    if (![krollContext isKJSThread])  {
+        dispatch_semaphore_wait(contextSemaphore, DISPATCH_TIME_FOREVER);
+    }    
+    dispatch_release(contextSemaphore);
+
     [proxy socketRunLoop];
-    [proxy forgetSelf];
+    
+    // Don't have to wait on a semaphore here; it's okay to clean out the pool without waiting.
+    [krollContext invokeBlockOnThread:^{
+        [proxy forgetSelf];
+        [proxy release];
+    }];
     
     [pool release];
 }
@@ -337,10 +359,10 @@ NSCondition* temp = [condition retain]; \
         [acceptArgs setValue:arg forKey:ARG_KEY];
         return;
     }
-    
-    ENSURE_SOCKET_THREAD(accept,arg);
+
     NSDictionary* args = nil;
     ENSURE_ARG_OR_NIL_AT_INDEX(args, arg, 0, NSDictionary);
+    ENSURE_SOCKET_THREAD(accept,arg);
     [acceptArgs setValue:arg forKey:ARG_KEY];
     
     CFSocketRef sock = [socket getCFSocket];

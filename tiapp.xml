@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ti:app xmlns:ti="http://ti.appcelerator.org">
-    <property name="ti.android.runtime">rhino</property>
+    <property name="acs-oauth-secret-development" type="string">hL5txAoBXnoXsYKMZvGB0TYIOIgCsNu0</property>
+    <property name="acs-oauth-key-development" type="string">vE40Hjvd8K1yfL0YYmrIrDI4iFawwqiS</property>
+    <property name="acs-api-key-development" type="string">T1ePMRY8AyoaTVepAcz0V8IzLqyh9K91</property>
+    <property name="acs-oauth-secret-production" type="string">rxx98OEPfkt0dT3Yhhok2yi7i57emCFT</property>
+    <property name="acs-oauth-key-production" type="string">j0wiMhH4rNEXKpMG91Yx21IWSvpSd6Zs</property>
+    <property name="acs-api-key-production" type="string">GPJC0Og0HXxJbSEL2bxEJHXHY9oDvVqH</property>
+    <property name="ti.android.runtime">v8</property>
     <deployment-targets>
         <target device="mobileweb">true</target>
         <target device="iphone">true</target>
@@ -8,7 +14,7 @@
         <target device="android">true</target>
         <target device="blackberry">false</target>
     </deployment-targets>
-    <sdk-version>1.8.0.1</sdk-version>
+    <sdk-version>2.0.1.GA2</sdk-version>
     <id>com.plebeianapps.CardPuller</id>
     <name>CardPuller</name>
     <version>1.0</version>
@@ -37,5 +43,7 @@
         </orientations>
     </iphone>
     <android xmlns:android="http://schemas.android.com/apk/res/android"/>
-    <modules/>
+    <modules>
+        <module platform="commonjs" version="2.0.1">ti.cloud</module>
+    </modules>
 </ti:app>

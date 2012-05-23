@@ -10,10 +10,18 @@
 
 #import "TiUIView.h"
 
-@interface TiUIScrollView : TiUIView<TiUIScrollView,UIScrollViewDelegate> {
+@interface TiUIScrollViewImpl : UIScrollView {
+@private
+    TiUIView * touchHandler;
+    UIView * touchedContentView;
+}
+-(void)setTouchHandler:(TiUIView*)handler;
+@end
+
+@interface TiUIScrollView : TiUIView<TiScrolling,UIScrollViewDelegate> {
 
 @private
-	UIScrollView * scrollView;
+	TiUIScrollViewImpl * scrollView;
 	UIView * wrapperView;
 	TiDimension contentWidth;
 	TiDimension contentHeight;
@@ -25,13 +33,13 @@
 	id	lastFocusedView; //DOES NOT RETAIN.
 }
 
-@property(nonatomic,retain,readonly) UIScrollView * scrollView;
+@property(nonatomic,retain,readonly) TiUIScrollViewImpl * scrollView;
 
 -(void)setNeedsHandleContentSize;
 -(void)setNeedsHandleContentSizeIfAutosizing;
 -(BOOL)handleContentSizeIfNeeded;
 -(void)handleContentSize;
-
+-(void)setContentOffset_:(id)value withObject:(id)property;
 -(UIView *)wrapperView;
 
 

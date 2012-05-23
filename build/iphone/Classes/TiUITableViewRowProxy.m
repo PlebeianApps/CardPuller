@@ -261,8 +261,8 @@ TiProxy * DeepScanForProxyOfViewContainingPoint(UIView * targetView, CGPoint poi
 -(void)_destroy
 {
 	RELEASE_TO_NIL(tableClass);
-    [rowContainerView performSelectorOnMainThread:@selector(removeFromSuperview) withObject:nil waitUntilDone:NO];
-	[rowContainerView performSelectorOnMainThread:@selector(release) withObject:nil waitUntilDone:NO];
+	TiThreadRemoveFromSuperviewOnMainThread(rowContainerView, NO);
+	TiThreadReleaseOnMainThread(rowContainerView, NO);
 	rowContainerView = nil;
 	[callbackCell setProxy:nil];
 	callbackCell = nil;
@@ -292,6 +292,11 @@ TiProxy * DeepScanForProxyOfViewContainingPoint(UIView * targetView, CGPoint poi
 	return tableClass;
 }
 
+-(id)height
+{
+    return [self valueForUndefinedKey:@"height"];
+}
+
 -(void)setHeight:(id)value
 {
 	height = [TiUtils dimensionValue:value];
@@ -302,6 +307,16 @@ TiProxy * DeepScanForProxyOfViewContainingPoint(UIView * targetView, CGPoint poi
 -(void)setValue:(id)value forUndefinedKey:(NSString *)key
 {
     if ([key isEqualToString:[@"lay" stringByAppendingString:@"out"]]) {
+        //CAN NOT USE THE MACRO 
+        if (ENFORCE_BATCH_UPDATE) {
+            if (updateStarted) {
+                [self setTempProperty:value forKey:key]; \
+                return;
+            }
+            else if(!allowLayoutUpdate){
+                return;
+            }
+        }
         layoutProperties.layoutStyle = TiLayoutRuleFromObject(value);
         [self replaceValue:value forKey:[@"lay" stringByAppendingString:@"out"] notification:YES];
         return;
@@ -343,15 +358,18 @@ TiProxy * DeepScanForProxyOfViewContainingPoint(UIView * targetView, CGPoint poi
 
 -(CGFloat)rowHeight:(CGFloat)width
 {
-	if (TiDimensionIsPixels(height))
+	if (TiDimensionIsDip(height))
 	{
 		return height.value;
 	}
 	CGFloat result = 0;
-	if (TiDimensionIsAuto(height))
+	if (TiDimensionIsAuto(height) || TiDimensionIsAutoSize(height) || TiDimensionIsUndefined(height))
 	{
-		result = [self autoHeightForWidth:width];
+		result = [self minimumParentHeightForSize:CGSizeMake(width, [self table].bounds.size.height)];
 	}
+    if (TiDimensionIsPercent(height) && [self table] != nil) {
+        result = TiDimensionCalculateValue(height, [self table].bounds.size.height);
+    }
 	return (result == 0) ? [table tableRowHeight:0] : result;
 }
 
@@ -733,7 +751,7 @@ TiProxy * DeepScanForProxyOfViewContainingPoint(UIView * targetView, CGPoint poi
 		TiUITableViewAction *action = [[[TiUITableViewAction alloc] initWithObject:self 
 																		 animation:nil 
 																			  type:TiUITableViewActionRowReload] autorelease];
-		[self performSelectorOnMainThread:@selector(updateRow:) withObject:action waitUntilDone:NO];
+		TiThreadPerformOnMainThread(^{[self updateRow:action];}, NO);
 	}
 }
 
@@ -838,18 +856,14 @@ TiProxy * DeepScanForProxyOfViewContainingPoint(UIView * targetView, CGPoint poi
 {
 	TiGradient * newGradient = [TiGradient gradientFromObject:arg proxy:self];
 	[self replaceValue:newGradient forKey:@"backgroundGradient" notification:NO];
-	
-	[callbackCell performSelectorOnMainThread:@selector(setBackgroundGradient_:)
-			withObject:newGradient waitUntilDone:NO];
+	TiThreadPerformOnMainThread(^{[callbackCell setBackgroundGradient_:newGradient];}, NO);
 }
 
 -(void)setSelectedBackgroundGradient:(id)arg
 {
 	TiGradient * newGradient = [TiGradient gradientFromObject:arg proxy:self];
 	[self replaceValue:newGradient forKey:@"selectedBackgroundGradient" notification:NO];
-	
-	[callbackCell performSelectorOnMainThread:@selector(setSelectedBackgroundGradient_:)
-			withObject:newGradient waitUntilDone:NO];
+	TiThreadPerformOnMainThread(^{[callbackCell setSelectedBackgroundGradient_:newGradient];}, NO);
 }
 
 
@@ -873,7 +887,10 @@ TiProxy * DeepScanForProxyOfViewContainingPoint(UIView * targetView, CGPoint poi
 	}
 }
 
-
+-(TiDimension)defaultAutoHeightBehavior:(id)unused
+{
+    return TiDimensionAutoSize;
+}
 @end
 
 #endif

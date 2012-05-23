@@ -79,7 +79,7 @@ void DoProxyDelegateChangedValuesWithProxy(UIView<TiProxyDelegate> * target, NSS
 				key = [NSString stringWithFormat:@"set%@%@_", [[key substringToIndex:1] uppercaseString], [key substringFromIndex:1]];
 			}
 			NSArray *arg = [NSArray arrayWithObjects:key,firstarg,secondarg,target,nil];
-			[proxy performSelectorOnMainThread:@selector(_dispatchWithObjectOnUIThread:) withObject:arg waitUntilDone:YES];
+			TiThreadPerformOnMainThread(^{[proxy _dispatchWithObjectOnUIThread:arg];}, YES);
 		}
 		return;
 	}
@@ -87,14 +87,7 @@ void DoProxyDelegateChangedValuesWithProxy(UIView<TiProxyDelegate> * target, NSS
 	sel = SetterForKrollProperty(key);
 	if ([target respondsToSelector:sel])
 	{
-		if ([NSThread isMainThread])
-		{
-			[target performSelector:sel withObject:newValue];
-		}
-		else
-		{
-			[target performSelectorOnMainThread:sel withObject:newValue waitUntilDone:YES modes:[NSArray arrayWithObject:NSRunLoopCommonModes]];
-		}
+		TiThreadPerformOnMainThread(^{[target performSelector:sel withObject:newValue];}, YES);
 	}
 }
 
@@ -120,7 +113,7 @@ void DoProxyDispatchToSecondaryArg(UIView<TiProxyDelegate> * target, SEL sel, NS
 			key = [NSString stringWithFormat:@"set%@%@_", [[key substringToIndex:1] uppercaseString], [key substringFromIndex:1]];
 		}
 		NSArray *arg = [NSArray arrayWithObjects:key,firstarg,secondarg,target,nil];
-		[proxy performSelectorOnMainThread:@selector(_dispatchWithObjectOnUIThread:) withObject:arg waitUntilDone:YES];
+		TiThreadPerformOnMainThread(^{[proxy _dispatchWithObjectOnUIThread:arg];}, YES);
 	}
 }
 
@@ -155,8 +148,7 @@ void DoProxyDelegateReadKeyFromProxy(UIView<TiProxyDelegate> * target, NSString 
 	}
 	else
 	{
-		[target performSelectorOnMainThread:sel withObject:value
-				waitUntilDone:NO modes:[NSArray arrayWithObject:NSRunLoopCommonModes]];
+		TiThreadPerformOnMainThread(^{[target performSelector:sel withObject:value];}, NO);
 	}
 }
 
@@ -214,6 +206,18 @@ void DoProxyDelegateReadValuesWithKeysFromProxy(UIView<TiProxyDelegate> * target
 		pthread_rwlock_init(&dynpropsLock, NULL);
 	}
 	return self;
+}
+
+-(void)initializeProperty:(NSString*)name defaultValue:(id)value
+{
+    pthread_rwlock_wrlock(&dynpropsLock);
+    if (dynprops == nil) {
+        dynprops = [[NSMutableDictionary alloc] init];
+    }
+    if ([dynprops valueForKey:name] == nil) {
+        [dynprops setValue:((value == nil) ? [NSNull null] : value) forKey:name];
+    }
+    pthread_rwlock_unlock(&dynpropsLock);
 }
 
 +(BOOL)shouldRegisterOnInit
@@ -399,7 +403,8 @@ void DoProxyDelegateReadValuesWithKeysFromProxy(UIView<TiProxyDelegate> * target
 	RELEASE_TO_NIL(baseURL);
 	RELEASE_TO_NIL(krollDescription);
     if ((void*)modelDelegate != self) {
-        RELEASE_TO_NIL(modelDelegate);
+		TiThreadReleaseOnMainThread(modelDelegate, YES);
+        modelDelegate = nil;
     }
 	pageContext=nil;
 	pageKrollObject = nil;
@@ -964,59 +969,7 @@ DEFINE_EXCEPTIONS
 
 - (void)replaceValue:(id)value forKey:(NSString*)key notification:(BOOL)notify
 {
-	// used for replacing a value and controlling model delegate notifications
-	if (value==nil)
-	{
-		if (!notify && (dynprops == nil)) {
-			//Don't bother to create a dictionary if it's
-			//going to be a waste.
-			return;
-		}
-		value = [NSNull null];
-	}
-	id current = nil;
-	if (!ignoreValueChanged)
-	{
-		pthread_rwlock_wrlock(&dynpropsLock);
-		if (dynprops==nil)
-		{
-			dynprops = [[NSMutableDictionary alloc] init];
-		}
-		else
-		{
-			// hold it for this invocation since set may cause it to be deleted
-			current = [dynprops objectForKey:key];
-			if (current!=nil)
-			{
-				current = [[current retain] autorelease];
-			}
-		}
-		if ((current!=value)&&![current isEqual:value])
-		{
-			[dynprops setValue:value forKey:key];
-		}
-		pthread_rwlock_unlock(&dynpropsLock);
-	}
-	
-	if (notify && self.modelDelegate!=nil)
-	{
-		[self.modelDelegate propertyChanged:key oldValue:current newValue:value proxy:self];
-	}
-}
-
-- (void) deleteKey:(NSString*)key
-{
-	pthread_rwlock_wrlock(&dynpropsLock);
-	if (dynprops!=nil)
-	{
-		[dynprops removeObjectForKey:key];
-	}
-	pthread_rwlock_unlock(&dynpropsLock);
-}
-
-- (void) setValue:(id)value forUndefinedKey: (NSString *) key
-{
-	if([value isKindOfClass:[KrollCallback class]]){
+    if([value isKindOfClass:[KrollCallback class]]){
 		[self setCallback:value forKey:key];
 		//As a wrapper, we hold onto a KrollWrapper tuple so that other contexts
 		//may access the function.
@@ -1025,7 +978,7 @@ DEFINE_EXCEPTIONS
 		[newValue setJsobject:[(KrollCallback*)value function]];
 		value = newValue;
 	}
-
+    
 	id current = nil;
 	pthread_rwlock_wrlock(&dynpropsLock);
 	if (dynprops!=nil)
@@ -1041,38 +994,57 @@ DEFINE_EXCEPTIONS
 	{
 		dynprops = [[NSMutableDictionary alloc] init];
 	}
-
-	id propvalue = value;
-	
-	if (value == nil)
-	{
-		propvalue = [NSNull null];
-	}
-	else if (value == [NSNull null])
-	{
-		value = nil;
-	}
-		
-	// notify our delegate
-	if (current!=value)
-	{
+    
+    // TODO: Clarify internal difference between nil/NSNull
+    // (which represent different JS values, but possibly consistent internal behavior)
+    
+    id propvalue = (value == nil) ? [NSNull null] : value;
+    
+    BOOL newValue = (current != propvalue && ![current isEqual:propvalue]);
+    
+    // We need to stage this out; the problem at hand is that some values
+    // we might store as properties (such as NSArray) use isEqual: as a
+    // strict address/hash comparison. So the notification must always
+    // occur, and it's up to the delegate to make sense of it (for now).
+    
+    if (newValue) {
         // Remember any proxies set on us so they don't get GC'd
         if ([propvalue isKindOfClass:[TiProxy class]]) {
             [self rememberProxy:propvalue];
         }
 		[dynprops setValue:propvalue forKey:key];
-		pthread_rwlock_unlock(&dynpropsLock);
-		if (self.modelDelegate!=nil)
-		{
-			[[(NSObject*)self.modelDelegate retain] autorelease];
-			[self.modelDelegate propertyChanged:key oldValue:current newValue:value proxy:self];
-		}
-        if ([current isKindOfClass:[TiProxy class]]) {
-            [self forgetProxy:current];
-        }
-		return; // so we don't unlock twice
+    }
+	pthread_rwlock_unlock(&dynpropsLock);
+    
+    if (self.modelDelegate!=nil && notify)
+    {
+        [[(NSObject*)self.modelDelegate retain] autorelease];
+        [self.modelDelegate propertyChanged:key 
+                                   oldValue:current 
+                                   newValue:propvalue
+                                      proxy:self];
+    }
+    
+    // Forget any old proxies so that they get cleaned up
+    if (newValue && [current isKindOfClass:[TiProxy class]]) {
+        [self forgetProxy:current];
+    }
+}
+
+// TODO: Shouldn't we be forgetting proxies and unprotecting callbacks and such here?
+- (void) deleteKey:(NSString*)key
+{
+	pthread_rwlock_wrlock(&dynpropsLock);
+	if (dynprops!=nil)
+	{
+		[dynprops removeObjectForKey:key];
 	}
 	pthread_rwlock_unlock(&dynpropsLock);
+}
+
+- (void) setValue:(id)value forUndefinedKey: (NSString *) key
+{
+    [self replaceValue:value forKey:key notification:YES];
 }
 
 -(NSDictionary*)allProperties
@@ -1113,6 +1085,7 @@ DEFINE_EXCEPTIONS
  
 #pragma mark Dispatching Helper
 
+//TODO: Now that we have TiThreadPerform, we should optimize this out.
 -(void)_dispatchWithObjectOnUIThread:(NSArray*)args
 {
 	//NOTE: this is called by ENSURE_UI_THREAD_WITH_OBJ and will always be on UI thread when we get here
@@ -1139,11 +1112,14 @@ DEFINE_EXCEPTIONS
 	if (krollDescription==nil) 
 	{ 
 		// if we have a cached id, use it for our identifier
-		NSString *cn = [self valueForUndefinedKey:@"id"];
-		if (cn==nil)
-		{
-			cn = [[self class] description];
-		}
+        id temp = [self valueForUndefinedKey:@"id"];
+        NSString *cn =nil;
+        if (temp==nil||![temp isKindOfClass:[NSString class]]){
+              cn = NSStringFromClass([self class]);
+        }
+        else {
+            cn = temp;
+        }
 		krollDescription = [[NSString stringWithFormat:@"[object %@]",[cn stringByReplacingOccurrencesOfString:@"Proxy" withString:@""]] retain];
 	}
 

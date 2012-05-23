@@ -371,6 +371,11 @@ CFHashCode	simpleHash(const void *value)
     [node setStringValue:data];
 }
 
+- (id)textContent
+{
+	return [node stringValue];
+}
+
 -(id)text
 {
 	return [node stringValue];

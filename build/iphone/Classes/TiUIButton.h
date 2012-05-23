@@ -13,15 +13,12 @@
 @interface TiUIButton : TiUIView {
 @private
 	UIButton *button;
+	UIImage * backgroundImageCache;
+	UIImage * backgroundImageUnstretchedCache;
+
 	int style;
 	
-	BOOL eventAlreadyTriggered;
-    //Variables holding for control state images
-    BOOL hasBackgroundForStateNormal;
-    BOOL hasBackgroundForStateFocused;
-    BOOL hasBackgroundForStateDisabled;
-    BOOL hasBackgroundForStateSelected;
-
+    BOOL touchStarted;
 }
 
 -(UIButton*)button;

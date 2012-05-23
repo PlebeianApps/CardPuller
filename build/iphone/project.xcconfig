@@ -1,4 +1,4 @@
-TI_VERSION=1.8.0.1
+TI_VERSION=2.0.1.GA2
 TI_SDK_DIR=/Users/id/Library/Application Support/Titanium/mobilesdk/osx/$(TI_VERSION)/iphone
 TI_APPID=com.plebeianapps.CardPuller
 OTHER_LDFLAGS[sdk=iphoneos*]=$(inherited) -weak_framework iAd

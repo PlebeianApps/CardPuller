@@ -18,6 +18,8 @@
 	ADBannerView *adview;
 }
 
+@property (nonatomic, readonly) ADBannerView* adview;
+
 @end
 
 #endif

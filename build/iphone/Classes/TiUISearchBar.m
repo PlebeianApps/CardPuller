@@ -28,6 +28,10 @@
 	RELEASE_TO_NIL(backgroundLayer);
 	[super dealloc];
 }
+-(CGFloat)contentHeightForWidth:(CGFloat)width
+{
+    return [[self searchBar] sizeThatFits:CGSizeZero].height;
+}
 
 -(UISearchBar*)searchBar
 {
@@ -36,6 +40,7 @@
 		searchView = [[UISearchBar alloc] initWithFrame:CGRectZero];
 		[searchView setAutoresizingMask:UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight];
 		[searchView setDelegate:self];
+		[searchView setShowsCancelButton:[(TiUISearchBarProxy *)[self proxy] showsCancelButton]];
 		[self addSubview:searchView];
 	}
 	return searchView;
@@ -45,6 +50,7 @@
 {
 	[[self searchBar] setFrame:bounds];
 	[backgroundLayer setFrame:bounds];
+    [super frameSizeChanged:frame bounds:bounds];
 }
 
 -(void)setDelegate:(id<UISearchBarDelegate>)delegate_

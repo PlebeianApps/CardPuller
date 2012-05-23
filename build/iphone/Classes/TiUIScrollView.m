@@ -12,6 +12,65 @@
 #import "TiUIScrollViewProxy.h"
 #import "TiUtils.h"
 
+@implementation TiUIScrollViewImpl
+
+-(void)setTouchHandler:(TiUIView*)handler
+{
+    //Assign only. No retain
+    touchHandler = handler;
+}
+
+- (BOOL)touchesShouldBegin:(NSSet *)touches withEvent:(UIEvent *)event inContentView:(UIView *)view
+{
+    //If the content view is of type TiUIView touch events will automatically propagate
+    //If it is not of type TiUIView we will fire touch events with ourself as source
+    if ([view isKindOfClass:[TiUIView class]]) {
+        touchedContentView= view;
+    }
+    else {
+        touchedContentView = nil;
+    }
+    return [super touchesShouldBegin:touches withEvent:event inContentView:view];
+}
+
+- (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event 
+{
+    //When userInteractionEnabled is false we do nothing since touch events are automatically
+    //propagated. If it is dragging,tracking or zooming do not do anything.
+    if (!self.dragging && !self.zooming && !self.tracking 
+        && self.userInteractionEnabled && (touchedContentView == nil) ) {
+        [touchHandler processTouchesBegan:touches withEvent:event];
+ 	}		
+	[super touchesBegan:touches withEvent:event];
+}
+- (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event 
+{
+    if (!self.dragging && !self.zooming && !self.tracking 
+        && self.userInteractionEnabled && (touchedContentView == nil) ) {
+        [touchHandler processTouchesMoved:touches withEvent:event];
+    }		
+	[super touchesMoved:touches withEvent:event];
+}
+
+- (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event 
+{
+    if (!self.dragging && !self.zooming && !self.tracking 
+        && self.userInteractionEnabled && (touchedContentView == nil) ) {
+        [touchHandler processTouchesEnded:touches withEvent:event];
+    }		
+	[super touchesEnded:touches withEvent:event];
+}
+
+- (void)touchesCancelled:(NSSet *)touches withEvent:(UIEvent *)event 
+{
+    if (!self.dragging && !self.zooming && !self.tracking 
+        && self.userInteractionEnabled && (touchedContentView == nil) ) {
+        [touchHandler processTouchesCancelled:touches withEvent:event];
+    }		
+	[super touchesCancelled:touches withEvent:event];
+}
+@end
+
 @implementation TiUIScrollView
 
 - (void) dealloc
@@ -35,16 +94,17 @@
 	return wrapperView;
 }
 
--(UIScrollView *)scrollView
+-(TiUIScrollViewImpl *)scrollView
 {
 	if(scrollView == nil)
 	{
-		scrollView = [[UIScrollView alloc] initWithFrame:[self bounds]];
+		scrollView = [[TiUIScrollViewImpl alloc] initWithFrame:[self bounds]];
 		[scrollView setAutoresizingMask:UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight];
 		[scrollView setBackgroundColor:[UIColor clearColor]];
 		[scrollView setShowsHorizontalScrollIndicator:NO];
 		[scrollView setShowsVerticalScrollIndicator:NO];
 		[scrollView setDelegate:self];
+        [scrollView setTouchHandler:self];
 		[self addSubview:scrollView];
 	}
 	return scrollView;
@@ -63,7 +123,7 @@
 	if (!needsHandleContentSize)
 	{
 		needsHandleContentSize = YES;
-		[self performSelectorOnMainThread:@selector(handleContentSize) withObject:nil waitUntilDone:NO];
+		TiThreadPerformOnMainThread(^{[self handleContentSize];}, NO);
 	}
 }
 
@@ -85,14 +145,14 @@
 
 	switch (contentWidth.type)
 	{
-		case TiDimensionTypePixels:
+		case TiDimensionTypeDip:
 		{
 			newContentSize.width = MAX(newContentSize.width,contentWidth.value);
 			break;
 		}
 		case TiDimensionTypeAuto:
 		{
-			newContentSize.width = MAX(newContentSize.width,[(TiViewProxy *)[self proxy] autoWidthForWidth:0.0]);
+			newContentSize.width = MAX(newContentSize.width,[(TiViewProxy *)[self proxy] autoWidthForSize:[self bounds].size]);
 			break;
 		}
 		default: {
@@ -102,14 +162,14 @@
 
 	switch (contentHeight.type)
 	{
-		case TiDimensionTypePixels:
+		case TiDimensionTypeDip:
 		{
 			minimumContentHeight = contentHeight.value;
 			break;
 		}
 		case TiDimensionTypeAuto:
 		{
-			minimumContentHeight=[(TiViewProxy *)[self proxy] autoHeightForWidth:newContentSize.width];
+			minimumContentHeight=[(TiViewProxy *)[self proxy] autoHeightForSize:[self bounds].size];
 			break;
 		}
 		default:
@@ -132,6 +192,7 @@
 {
 	//Treat this as a size change
 	[(TiViewProxy *)[self proxy] willChangeSize];
+    [super frameSizeChanged:frame bounds:visibleBounds];
 }
 
 -(void)setContentWidth_:(id)value
@@ -166,6 +227,11 @@
 	[[self scrollView] setBounces:![TiUtils boolValue:value]];
 }
 
+-(void)setScrollsToTop_:(id)value
+{
+	[[self scrollView] setScrollsToTop:[TiUtils boolValue:value]];
+}
+
 -(void)setHorizontalBounce_:(id)value
 {
 	[[self scrollView] setAlwaysBounceHorizontal:[TiUtils boolValue:value]];
@@ -176,10 +242,10 @@
 	[[self scrollView] setAlwaysBounceVertical:[TiUtils boolValue:value]];
 }
 
--(void)setContentOffset_:(id)value
+-(void)setContentOffset_:(id)value withObject:(id)property
 {
-	CGPoint newOffset = [TiUtils pointValue:value];
-	BOOL animated = scrollView != nil;
+    CGPoint newOffset = [TiUtils pointValue:value];
+	BOOL animated = [TiUtils boolValue:@"animated" properties:property def:(scrollView !=nil)];
 	[[self scrollView] setContentOffset:newOffset animated:animated];
 }
 
@@ -257,16 +323,10 @@
 
 -(void)scrollToShowView:(TiUIView *)firstResponderView withKeyboardHeight:(CGFloat)keyboardTop
 {
-	CGRect responderRect = [wrapperView convertRect:[firstResponderView bounds] fromView:firstResponderView];
-	OffsetScrollViewForRect(scrollView,keyboardTop,minimumContentHeight,responderRect);
-}
-
--(void)keyboardDidShowAtHeight:(CGFloat)keyboardTop forView:(TiUIView *)firstResponderView
-{
-	lastFocusedView = firstResponderView;
-	CGRect responderRect = [wrapperView convertRect:[firstResponderView bounds] fromView:firstResponderView];
-	
-	ModifyScrollViewForKeyboardHeightAndContentHeightWithResponderRect(scrollView,keyboardTop,minimumContentHeight,responderRect);
+    if ([scrollView isScrollEnabled]) {
+        CGRect responderRect = [wrapperView convertRect:[firstResponderView bounds] fromView:firstResponderView];
+        OffsetScrollViewForRect(scrollView,keyboardTop,minimumContentHeight,responderRect);
+    }
 }
 
 @end

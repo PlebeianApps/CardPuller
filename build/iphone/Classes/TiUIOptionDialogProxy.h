@@ -18,12 +18,13 @@
 	TiViewProxy *dialogView;
 	CGRect dialogRect;
 	BOOL animated;
-
+    NSUInteger accumulatedOrientationChanges;
+	BOOL showDialog;
 }
 
 @property(nonatomic,retain,readwrite)	TiViewProxy *dialogView;
 
--(void)updateOptionDialog:(NSNotification *)notification;
+-(void)deviceRotationBegan:(NSNotification *)notification;
 -(void)updateOptionDialogNow;
 
 @end

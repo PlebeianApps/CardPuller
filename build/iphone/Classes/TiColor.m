@@ -13,6 +13,8 @@
 
 @implementation TiColor
 
+@synthesize color, name;
+
 +(id)colorNamed:(NSString *)name
 {
 	TiColor * result;
@@ -57,14 +59,16 @@
 	return name;
 }
 
+#pragma mark Deprecated
+
 -(UIColor*)_color
 {
-	return [[color retain] autorelease];
+	return self.color;
 }
 
 -(NSString*)_name
 {
-	return name;
+	return self.name;
 }
 
 @end

@@ -64,7 +64,7 @@
 {
 	if (button!=nil)
 	{
-		[button performSelectorOnMainThread:@selector(setNeedsLayout) withObject:nil waitUntilDone:NO];
+		TiThreadPerformOnMainThread(^{[button setNeedsLayout];}, NO);
 	}
 }
 

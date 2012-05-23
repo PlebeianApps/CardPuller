@@ -311,16 +311,8 @@ NSString * const TI_DB_VERSION = @"1";
 	[dict setObject:[TiUtils UTCDate] forKey:@"ts"];
 	[dict setObject:[TiUtils createUUID] forKey:@"id"];
 	[dict setObject:NUMINT(sequence++) forKey:@"seq"];
-	[dict setObject:[TiUtils uniqueIdentifier] forKey:@"mid"];
-#if 0
-	// In 1.8, we'll be using this additional field for rotating IDs
-    if ([[UIDevice currentDevice] respondsToSelector:@selector(uniqueIdentifier)]) {
-    	NSString* uid = [[UIDevice currentDevice] uniqueIdentifier];
-    	if (uid) {
-	        [dict setObject:uid forKey:@"omid"];
-        }
-    }
-#endif
+	[dict setObject:[TiUtils appIdentifier] forKey:@"mid"];
+
 	[dict setObject:TI_APPLICATION_GUID forKey:@"aguid"];
 	[dict setObject:TI_APPLICATION_DEPLOYTYPE forKey:@"deploytype"];
 	[dict setObject:name forKey:@"event"];
@@ -461,7 +453,6 @@ NSString * const TI_DB_VERSION = @"1";
 		
 		NSMutableDictionary *enrollment = [NSMutableDictionary dictionary];
 		
-		[enrollment setObject:[platform valueForKey:@"macaddress"] forKey:@"mac_addr"];
 		[enrollment setObject:[platform valueForKey:@"processorCount"] forKey:@"oscpu"];
 		[enrollment setObject:[platform valueForKey:@"ostype"] forKey:@"ostype"];
 		[enrollment setObject:[platform valueForKey:@"architecture"] forKey:@"osarch"];
@@ -482,7 +473,7 @@ NSString * const TI_DB_VERSION = @"1";
     }
 }
 
--(void)begin
+-(NSDictionary *)startupDataPayload
 {
 	BOOL enrolled = NO;
 	NSString *path = [self checkForEnrollment:&enrolled];
@@ -520,8 +511,7 @@ NSString * const TI_DB_VERSION = @"1";
 						   @"iphone", @"platform",
 						   nil
 						   ];
-	
-	[self queueEvent:@"ti.start" name:@"ti.start" data:data immediate:NO];
+	return data;
 }
 
 #pragma mark Lifecycle
@@ -543,7 +533,7 @@ NSString * const TI_DB_VERSION = @"1";
 	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(analyticsEvent:) name:kTiAnalyticsNotification object:nil];
 	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(remoteDeviceUUIDChanged:) name:kTiRemoteDeviceUUIDNotification object:nil];
 	
-	[self begin];
+	[self queueEvent:@"ti.start" name:@"ti.start" data:[self startupDataPayload] immediate:NO];
 	[super startup];
 }
 
@@ -569,6 +559,12 @@ NSString * const TI_DB_VERSION = @"1";
 		NSString *name = [event objectForKey:@"name"];
 		NSString *type = [event objectForKey:@"type"];
 		NSDictionary *data = [event objectForKey:@"data"];
+		
+		if (IS_NULL_OR_NIL(data) && [type isEqualToString:@"ti.foreground"]) {
+			//Do we want to open this up to other events? On one hand, more data
+			//is good. On the other, sending unneeded data is expensive.
+			data = [self startupDataPayload];
+		}
 		[self queueEvent:type name:name data:data immediate:NO];
 	}
 	else

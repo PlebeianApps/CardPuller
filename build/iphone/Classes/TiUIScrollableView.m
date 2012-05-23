@@ -25,6 +25,7 @@
 {
 	RELEASE_TO_NIL(scrollview);
 	RELEASE_TO_NIL(pageControl);
+    RELEASE_TO_NIL(pageControlBackgroundColor);
 	[super dealloc];
 }
 
@@ -32,6 +33,8 @@
 {
 	if (self = [super init]) {
         cacheSize = 3;
+        pageControlHeight=20;
+        pageControlBackgroundColor = [[UIColor blackColor] retain];
 	}
 	return self;
 }
@@ -56,7 +59,7 @@
 		pageControl = [[UIPageControl alloc] initWithFrame:[self pageControlRect]];
 		[pageControl setAutoresizingMask:UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleTopMargin];
 		[pageControl addTarget:self action:@selector(pageControlTouched:) forControlEvents:UIControlEventValueChanged];
-		[pageControl setBackgroundColor:[UIColor blackColor]];
+		[pageControl setBackgroundColor:pageControlBackgroundColor];
 		[self addSubview:pageControl];
 	}
 	return pageControl;
@@ -74,8 +77,14 @@
 		[scrollview setShowsVerticalScrollIndicator:NO];
 		[scrollview setShowsHorizontalScrollIndicator:NO];
 		[scrollview setDelaysContentTouches:NO];
-		[scrollview setClipsToBounds:[TiUtils boolValue:[self.proxy valueForKey:@"clipViews"] def:YES]];
+		BOOL clipsToBounds = [TiUtils boolValue:[self.proxy valueForKey:@"clipViews"] def:YES];
+		[scrollview setClipsToBounds:clipsToBounds];
 		[self insertSubview:scrollview atIndex:0];
+        
+        //Update clips to bounds only if cornerRadius and backgroundImage are not set
+        if ( (self.layer.cornerRadius == 0) && (self.backgroundImage == nil) ) {
+            [self setClipsToBounds:clipsToBounds];
+        }
 	}
 	return scrollview;
 }
@@ -86,7 +95,9 @@
 	{
 		UIPageControl *pg = [self pagecontrol];
 		[pg setFrame:[self pageControlRect]];
-		[pg setNumberOfPages:[[self proxy] viewCount]];
+        [pg setNumberOfPages:[[self proxy] viewCount]];
+        [pg setBackgroundColor:pageControlBackgroundColor];
+		pg.currentPage = currentPage;
 	}	
 }
 
@@ -217,6 +228,12 @@
 	}
 	
 	int viewsCount = [[self proxy] viewCount];
+	/*
+	Reset readd here since refreshScrollView is called from
+	frameSizeChanged with readd false and the views might 
+	not yet have been added on first launch
+	*/
+	readd = ([[sv subviews] count] == 0);
 	
 	for (int c=0;c<viewsCount;c++)
 	{
@@ -272,10 +289,19 @@
 {
 	if (!CGRectIsEmpty(visibleBounds))
 	{
-		[self refreshScrollView:visibleBounds readd:YES];
+		[self refreshScrollView:visibleBounds readd:NO];
 		[scrollview setContentOffset:CGPointMake(lastPage*visibleBounds.size.width,0)];
         [self manageCache:[self currentPage]];
 	}
+    //To make sure all subviews are properly resized.
+    UIScrollView *sv = [self scrollview];
+    for(UIView *view in [sv subviews]){
+        for (TiUIView *sView in [view subviews]) {
+                [sView checkBounds];
+        }
+    }
+    
+    [super frameSizeChanged:frame bounds:visibleBounds];
 }
 
 #pragma mark Public APIs
@@ -307,6 +333,7 @@
 -(void)setShowPagingControl_:(id)args
 {
 	showPageControl = [TiUtils boolValue:args];
+    
 	if (pageControl!=nil)
 	{
 		if (showPageControl==NO)
@@ -315,21 +342,26 @@
 			RELEASE_TO_NIL(pageControl);
 		}
 	}
-	else if (showPageControl)
-	{
-		[self pagecontrol];
-	}
+	
+    if ((scrollview!=nil) && ([[scrollview subviews] count]>0)) {
+        //No need to readd. Just set up the correct frame bounds
+        [self refreshScrollView:[self bounds] readd:NO];
+    }
+	
 }
 
 -(void)setPagingControlHeight_:(id)args
 {
-	showPageControl=YES;
 	pageControlHeight = [TiUtils floatValue:args def:20.0];
 	if (pageControlHeight < 5.0)
 	{
 		pageControlHeight = 20.0;
 	}
-	[[self pagecontrol] setFrame:[self pageControlRect]];
+    
+    if (showPageControl && (scrollview!=nil) && ([[scrollview subviews] count]>0)) {
+        //No need to readd. Just set up the correct frame bounds
+        [self refreshScrollView:[self bounds] readd:NO];
+    }
 }
 
 -(void)setPageControlHeight_:(id)arg
@@ -340,7 +372,14 @@
 
 -(void)setPagingControlColor_:(id)args
 {
-	[[self pagecontrol] setBackgroundColor:[[TiUtils colorValue:args] _color]];
+    TiColor* val = [TiUtils colorValue:args];
+    if (val != nil) {
+        RELEASE_TO_NIL(pageControlBackgroundColor);
+        pageControlBackgroundColor = [[val _color] retain];
+        if (showPageControl && (scrollview!=nil) && ([[scrollview subviews] count]>0)) {
+            [[self pagecontrol] setBackgroundColor:pageControlBackgroundColor];
+        }
+    }
 }
 
 -(int)pageNumFromArg:(id)args
@@ -406,6 +445,12 @@
         
 		[self.proxy replaceValue:NUMINT(newPage) forKey:@"currentPage" notification:NO];
 	}
+}
+
+-(void)setScrollingEnabled_:(id)enabled
+{
+    scrollingEnabled = [TiUtils boolValue:enabled];
+    [[self scrollview] setScrollEnabled:scrollingEnabled];
 }
 
 -(void)setDisableBounce_:(id)value

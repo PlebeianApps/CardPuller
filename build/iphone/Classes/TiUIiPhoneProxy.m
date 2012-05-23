@@ -173,8 +173,8 @@ RELEASE_TO_NIL(x); \
 
 -(void)hideStatusBar:(id)args
 {
-	ENSURE_UI_THREAD(hideStatusBar,args);
 	ENSURE_SINGLE_ARG_OR_NIL(args,NSDictionary);
+	ENSURE_UI_THREAD(hideStatusBar,args);
 	
 	BOOL animated = [TiUtils boolValue:@"animated" properties:args def:YES];
 	
@@ -196,8 +196,8 @@ RELEASE_TO_NIL(x); \
 
 -(void)showStatusBar:(id)args
 {
-	ENSURE_UI_THREAD(showStatusBar,args);
 	ENSURE_SINGLE_ARG_OR_NIL(args,NSDictionary);
+	ENSURE_UI_THREAD(showStatusBar,args);
 	
 	BOOL animated = [TiUtils boolValue:@"animated" properties:args def:YES];
 
@@ -219,8 +219,8 @@ RELEASE_TO_NIL(x); \
 
 -(void)setStatusBarHidden:(id)hidden
 {
-	ENSURE_UI_THREAD(setStatusBarHidden,hidden);
 	ENSURE_SINGLE_ARG(hidden,NSObject);
+	ENSURE_UI_THREAD(setStatusBarHidden,hidden);
 	
 	BOOL value = [TiUtils boolValue:hidden];
 	
