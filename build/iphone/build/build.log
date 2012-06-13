@@ -2494,3 +2494,15 @@ Touch build/Debug-iphonesimulator/CardPuller.app
 
 + Looking for application binary at /Users/id/Personal/Work/DesignJobs/Plebeian/Titanium2/CardPuller/build/iphone/build/Debug-iphonesimulator/CardPuller.app/CardPuller
 Finishing build
+
+Exception detected in script:
+Traceback (most recent call last):
+  File "/Users/id/Library/Application Support/Titanium/mobilesdk/osx/2.0.1.GA2/iphone/builder.py", line 1420, in main
+    os.waitpid(sim.pid,0)
+  File "/Users/id/Library/Application Support/Titanium/mobilesdk/osx/2.0.1.GA2/iphone/builder.py", line 1355, in handler
+    kill_simulator()
+  File "/Users/id/Library/Application Support/Titanium/mobilesdk/osx/2.0.1.GA2/iphone/builder.py", line 77, in kill_simulator
+    run.run(['/usr/bin/killall',"iPhone Simulator"],True)
+  File "/Users/id/Library/Application Support/Titanium/mobilesdk/osx/2.0.1.GA2/iphone/run.py", line 8, in run
+    sys.stdout.flush()
+IOError: [Errno 32] Broken pipe

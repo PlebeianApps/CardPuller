@@ -28,3 +28,4 @@ Logfile initialized
 [INFO] Launching application ... CardPuller
 [TRACE] Launch output: Starting: Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] cmp=com.plebeianapps.CardPuller/.CardpullerActivity }
 
+[DEBUG] signal caught: 15
