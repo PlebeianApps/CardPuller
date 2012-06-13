@@ -6,29 +6,30 @@ function ListWindow(title) {
 		});
 		
 		var TabWindow = require('ui/TabWindow');
-		var readings = new TabWindow('Readings');
+        var ReadDescWindow = require('ui/ReadDescWindow');
+        var CardData = require('db/CardData');
+        		
 		var readingDescription = new TabWindow('Reading Title');
 		var readingCards = new TabWindow('Reading Cards');
 		
-		var tbl_data = [
+		
+	    var tbl_data = new CardData().getData();
+		/* var tbl_data = [
     		{title:'Row 1'},
 		    {title:'Row 2'},
 		    {title:'Row 3'}
-		];
+		]; */
 		
 		var table = Titanium.UI.createTableView({
 			data:tbl_data
 		});
 		
+	
 		// Listen for click events.
 		table.addEventListener('click', function(e) {
-			if (e.index === 0){
-				window.containingTab.open(readings);
-			} else if (e.index === 1){
-				window.containingTab.open(readingDescription);
-			} else {
-				window.containingTab.open(readingCards);
-			}
+		    window.fireEvent('updateDesc',{title: e.rowData.title, description: e.rowData.description, numberCards: e.rowData.numberCards});
+			var readings = new ReadDescWindow();
+			window.containingTab.open(readings);
 		});
 		
 		

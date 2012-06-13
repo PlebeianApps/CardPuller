@@ -1,18 +1,30 @@
 Logfile initialized
-[INFO] logfile = /Users/id/Personal/Work/DesignJobs/Plebeian/Titanium/CardPuller/build.log
-[DEBUG] /Users/id/Library/Application Support/Titanium/mobilesdk/osx/1.8.0.1/android/builder.py simulator CardPuller /Users/id/Personal/Work/DesignJobs/Plebeian/SDKs /Users/id/Personal/Work/DesignJobs/Plebeian/Titanium/CardPuller com.plebeianapps.CardPuller 17 HVGA 
+[INFO] logfile = /Users/id/Personal/Work/DesignJobs/Plebeian/Titanium2/CardPuller/build.log
+[DEBUG] /Users/id/Library/Application Support/Titanium/mobilesdk/osx/2.0.1.GA2/android/builder.py simulator CardPuller /Users/id/Personal/Work/DesignJobs/Plebeian/SDKs/android /Users/id/Personal/Work/DesignJobs/Plebeian/Titanium2/CardPuller com.plebeianapps.CardPuller 6 HVGA 
 [INFO] Building CardPuller for Android ... one moment
-[INFO] Titanium SDK version: 1.8.0.1 (12/22/11 13:09 fbdc96f)
+[INFO] Titanium SDK version: 2.0.1 (04/12/12 16:33 999c68a)
 [DEBUG] Waiting for device to be ready ...
 [TRACE] adb devices returned 1 devices/emulators
-[TRACE] adb devices returned 1 devices/emulators
-[TRACE] adb devices returned 1 devices/emulators
-[TRACE] adb devices returned 1 devices/emulators
-[TRACE] adb devices returned 1 devices/emulators
-[TRACE] adb devices returned 0 devices/emulators
-[TRACE] adb devices returned 0 devices/emulators
-[TRACE] adb devices returned 0 devices/emulators
-[TRACE] adb devices returned 0 devices/emulators
-[TRACE] adb devices returned 0 devices/emulators
-[TRACE] adb devices returned 0 devices/emulators
-[ERROR] Timed out waiting for emulator to be ready, you may need to close the emulator and try again
+[DEBUG] Device connected... (waited 0 seconds)
+[DEBUG] waited 0.021698 seconds on emulator to get ready
+[DEBUG] com.plebeianapps.CardPuller installed? True
+[INFO] Fastdev server running, deploying in Fastdev mode
+[INFO] Copying CommonJS modules...
+[INFO] Copying project resources..
+[INFO] Tiapp.xml unchanged, skipping class generation
+[DEBUG] Processing Android resource drawables
+[DEBUG] found drawable-long-land-hdpi splash screen at /Users/id/Personal/Work/DesignJobs/Plebeian/Titanium2/CardPuller/Resources/android/images/res-long-land-hdpi/default.png
+[DEBUG] found drawable-long-land-ldpi splash screen at /Users/id/Personal/Work/DesignJobs/Plebeian/Titanium2/CardPuller/Resources/android/images/res-long-land-ldpi/default.png
+[DEBUG] found drawable-long-port-hdpi splash screen at /Users/id/Personal/Work/DesignJobs/Plebeian/Titanium2/CardPuller/Resources/android/images/res-long-port-hdpi/default.png
+[DEBUG] found drawable-long-port-ldpi splash screen at /Users/id/Personal/Work/DesignJobs/Plebeian/Titanium2/CardPuller/Resources/android/images/res-long-port-ldpi/default.png
+[DEBUG] found drawable-notlong-land-hdpi splash screen at /Users/id/Personal/Work/DesignJobs/Plebeian/Titanium2/CardPuller/Resources/android/images/res-notlong-land-hdpi/default.png
+[DEBUG] found drawable-notlong-land-ldpi splash screen at /Users/id/Personal/Work/DesignJobs/Plebeian/Titanium2/CardPuller/Resources/android/images/res-notlong-land-ldpi/default.png
+[DEBUG] found drawable-notlong-land-mdpi splash screen at /Users/id/Personal/Work/DesignJobs/Plebeian/Titanium2/CardPuller/Resources/android/images/res-notlong-land-mdpi/default.png
+[DEBUG] found drawable-notlong-port-hdpi splash screen at /Users/id/Personal/Work/DesignJobs/Plebeian/Titanium2/CardPuller/Resources/android/images/res-notlong-port-hdpi/default.png
+[DEBUG] found drawable-notlong-port-ldpi splash screen at /Users/id/Personal/Work/DesignJobs/Plebeian/Titanium2/CardPuller/Resources/android/images/res-notlong-port-ldpi/default.png
+[DEBUG] found drawable-notlong-port-mdpi splash screen at /Users/id/Personal/Work/DesignJobs/Plebeian/Titanium2/CardPuller/Resources/android/images/res-notlong-port-mdpi/default.png
+[INFO] Waiting for SDCard to become available..
+[INFO] Re-launching application ... CardPuller
+[INFO] Launching application ... CardPuller
+[TRACE] Launch output: Starting: Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] cmp=com.plebeianapps.CardPuller/.CardpullerActivity }
+
