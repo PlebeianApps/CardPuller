@@ -1,19 +1,9 @@
-function ReadDescWindow() {
+function ReadDescWindow(defaultTitle) {
     
         var window = Ti.UI.createWindow({
             backgroundColor: 'white',
-            title : 'default title'
+            title : defaultTitle
         }); //create window
-        this.title;
-        this.description;
-        this.numberCards;
-        window.addEventListener('updateDesc',function(e){
-            this.title = e.title;
-            this.description = e.description;
-            this.numberCards = e.numberCards;
-        });
-        
-        window.title = this.title;
         
         var scroll =  Ti.UI.createScrollView({
             contentHeight:'auto',
@@ -36,7 +26,7 @@ function ReadDescWindow() {
         });//create button
         
         var l1 = Titanium.UI.createLabel({
-            text: this.numberCards,
+            text: 'Default Number of Cards',
             height:Ti.UI.SIZE,
             color:'#900',
             font:{fontSize:48},
@@ -44,23 +34,26 @@ function ReadDescWindow() {
         });
         
         var l2 = Titanium.UI.createLabel({
-            text: this.description,
+            text: 'Default Description',
             height:Ti.UI.SIZE,
             color:'#900',
             font:{fontSize:24},
             textAlign:'center'
         });//create labels
         
-        
         view.add(button);
         view.add(l1);
-        view.add(l2);//add labels to view
-        //add button to view
+        view.add(l2); 
         scroll.add(view);//add view to scroll
         window.add(scroll);//add scroll to window
-    
+    	
+        Ti.API.addEventListener('updateDesc',function(e){
+            l2.text = e.description;
+            //Ti.API.info('e.description is ' + e.description);
+            l1.text = e.numberCards;
+            window.title = e.title;
+        });
         return window;
-
 };
 
 module.exports = ReadDescWindow;

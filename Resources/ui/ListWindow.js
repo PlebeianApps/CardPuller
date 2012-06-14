@@ -24,11 +24,11 @@ function ListWindow(title) {
 			data:tbl_data
 		});
 		
-	
+		var readings = new ReadDescWindow('Default Reading Title');
 		// Listen for click events.
 		table.addEventListener('click', function(e) {
-		    window.fireEvent('updateDesc',{title: e.rowData.title, description: e.rowData.description, numberCards: e.rowData.numberCards});
-			var readings = new ReadDescWindow();
+			//var readings = new ReadDescWindow(e.rowData.title);
+			Ti.API.fireEvent('updateDesc',{title: e.rowData.title, description: e.rowData.descrip, numberCards: e.rowData.numberCards});
 			window.containingTab.open(readings);
 		});
 		

@@ -27,7 +27,7 @@ CardData.prototype.getData = function(){
         data.push({
             id: rows.fieldByName("ID"),
             title: rows.fieldByName("TITLE"),
-            description: rows.fieldByName("DESCRIPTION"),
+            descrip: rows.fieldByName("DESCRIPTION"), // "description" is a reserved TableView keyword
             numberCards: rows.fieldByName("NUMBERCARDS"),
             color: 'black'
         });
